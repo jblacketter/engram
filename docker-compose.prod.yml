@@ -1,0 +1,81 @@
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - staticfiles:/app/staticfiles:ro
+    depends_on:
+      - django
+      - mcp
+
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: engram.settings.production
+      POSTGRES_HOST: db
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - staticfiles:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8000"
+
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: engram.settings.production
+      POSTGRES_HOST: db
+      OLLAMA_BASE_URL: http://ollama:11434
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - "8080"
+
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-engram}
+      POSTGRES_USER: ${POSTGRES_USER:-engram}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init-pgvector.sql:/docker-entrypoint-initdb.d/01-init-pgvector.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U engram"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "5432"
+
+  ollama:
+    image: ollama/ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    expose:
+      - "11434"
+
+volumes:
+  pgdata:
+  ollama_models:
+  staticfiles:

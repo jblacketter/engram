@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment
+.env
+
+# Django
+staticfiles/
+*.sqlite3
+media/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (frontend)
+node_modules/
+frontend/dist/
+
+# Docker
+docker-compose.override.yml
+
+# Production artifacts
+certs/
+backups/
+*.dump
+
+# Handoff state (local orchestration)
+.handoff-session.json

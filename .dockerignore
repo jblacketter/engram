@@ -1,0 +1,9 @@
+.git
+.env
+certs/
+backups/
+frontend/node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/

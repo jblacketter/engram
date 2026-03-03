@@ -1,0 +1,149 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d0221;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1a0a3e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f1b4c;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6c63ff;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#b388ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6c63ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="nodeGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7c4dff;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#448aff;stop-opacity:0.8" />
+    </linearGradient>
+    <filter id="blur1">
+      <feGaussianBlur stdDeviation="2" />
+    </filter>
+    <filter id="blur2">
+      <feGaussianBlur stdDeviation="4" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="200" fill="url(#bg)" rx="8" ry="8" />
+
+  <!-- Subtle grid pattern -->
+  <g style="opacity:0.04">
+    <line x1="0" y1="40" x2="800" y2="40" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="0" y1="80" x2="800" y2="80" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="0" y1="120" x2="800" y2="120" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="0" y1="160" x2="800" y2="160" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="100" y1="0" x2="100" y2="200" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="200" y1="0" x2="200" y2="200" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="300" y1="0" x2="300" y2="200" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="400" y1="0" x2="400" y2="200" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="500" y1="0" x2="500" y2="200" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="600" y1="0" x2="600" y2="200" style="stroke:#b388ff;stroke-width:0.5" />
+    <line x1="700" y1="0" x2="700" y2="200" style="stroke:#b388ff;stroke-width:0.5" />
+  </g>
+
+  <!-- Network connections (background) -->
+  <g style="opacity:0.15">
+    <!-- Far background connections -->
+    <line x1="50" y1="30" x2="150" y2="80" style="stroke:#7c4dff;stroke-width:0.8" />
+    <line x1="150" y1="80" x2="100" y2="160" style="stroke:#7c4dff;stroke-width:0.8" />
+    <line x1="100" y1="160" x2="200" y2="130" style="stroke:#7c4dff;stroke-width:0.8" />
+    <line x1="650" y1="40" x2="720" y2="90" style="stroke:#7c4dff;stroke-width:0.8" />
+    <line x1="720" y1="90" x2="760" y2="50" style="stroke:#7c4dff;stroke-width:0.8" />
+    <line x1="720" y1="90" x2="680" y2="160" style="stroke:#7c4dff;stroke-width:0.8" />
+    <line x1="680" y1="160" x2="750" y2="170" style="stroke:#7c4dff;stroke-width:0.8" />
+  </g>
+
+  <!-- Network connections (midground) -->
+  <g style="opacity:0.25">
+    <line x1="120" y1="55" x2="230" y2="95" style="stroke:#b388ff;stroke-width:1" />
+    <line x1="230" y1="95" x2="180" y2="150" style="stroke:#b388ff;stroke-width:1" />
+    <line x1="230" y1="95" x2="290" y2="70" style="stroke:#b388ff;stroke-width:1" />
+    <line x1="580" y1="65" x2="660" y2="105" style="stroke:#b388ff;stroke-width:1" />
+    <line x1="660" y1="105" x2="620" y2="155" style="stroke:#b388ff;stroke-width:1" />
+    <line x1="660" y1="105" x2="740" y2="130" style="stroke:#b388ff;stroke-width:1" />
+  </g>
+
+  <!-- Background nodes (far) -->
+  <g style="opacity:0.2">
+    <circle cx="50" cy="30" r="3" style="fill:#7c4dff" />
+    <circle cx="150" cy="80" r="4" style="fill:#7c4dff" />
+    <circle cx="100" cy="160" r="3" style="fill:#7c4dff" />
+    <circle cx="200" cy="130" r="2.5" style="fill:#7c4dff" />
+    <circle cx="760" cy="50" r="3" style="fill:#7c4dff" />
+    <circle cx="750" cy="170" r="2.5" style="fill:#7c4dff" />
+  </g>
+
+  <!-- Midground nodes -->
+  <g style="opacity:0.35">
+    <circle cx="120" cy="55" r="4" style="fill:#b388ff" />
+    <circle cx="230" cy="95" r="5" style="fill:#b388ff" />
+    <circle cx="180" cy="150" r="3.5" style="fill:#b388ff" />
+    <circle cx="290" cy="70" r="3" style="fill:#b388ff" />
+    <circle cx="580" cy="65" r="4" style="fill:#b388ff" />
+    <circle cx="660" cy="105" r="5" style="fill:#b388ff" />
+    <circle cx="620" cy="155" r="3.5" style="fill:#b388ff" />
+    <circle cx="740" cy="130" r="3" style="fill:#b388ff" />
+  </g>
+
+  <!-- Foreground accent nodes with glow -->
+  <g>
+    <circle cx="650" cy="40" r="4" style="fill:#b388ff;opacity:0.5" filter="url(#blur1)" />
+    <circle cx="650" cy="40" r="2.5" style="fill:#e0d0ff;opacity:0.7" />
+    <circle cx="720" cy="90" r="5" style="fill:#7c4dff;opacity:0.4" filter="url(#blur1)" />
+    <circle cx="720" cy="90" r="3" style="fill:#d0c0ff;opacity:0.6" />
+    <circle cx="680" cy="160" r="4" style="fill:#b388ff;opacity:0.5" filter="url(#blur1)" />
+    <circle cx="680" cy="160" r="2.5" style="fill:#e0d0ff;opacity:0.7" />
+  </g>
+
+  <!-- Central brain/network icon -->
+  <g transform="translate(310, 68)">
+    <!-- Outer ring glow -->
+    <circle cx="0" cy="0" r="38" style="fill:none;stroke:#7c4dff;stroke-width:1.5;opacity:0.15" filter="url(#blur2)" />
+    <circle cx="0" cy="0" r="32" style="fill:none;stroke:#b388ff;stroke-width:1;opacity:0.2" />
+
+    <!-- Inner network: connections -->
+    <g style="opacity:0.6">
+      <line x1="0" y1="-18" x2="-15" y2="-6" style="stroke:#b388ff;stroke-width:1.2" />
+      <line x1="0" y1="-18" x2="15" y2="-6" style="stroke:#b388ff;stroke-width:1.2" />
+      <line x1="-15" y1="-6" x2="-18" y2="12" style="stroke:#b388ff;stroke-width:1.2" />
+      <line x1="15" y1="-6" x2="18" y2="12" style="stroke:#b388ff;stroke-width:1.2" />
+      <line x1="-18" y1="12" x2="-8" y2="20" style="stroke:#b388ff;stroke-width:1.2" />
+      <line x1="18" y1="12" x2="8" y2="20" style="stroke:#b388ff;stroke-width:1.2" />
+      <line x1="-8" y1="20" x2="8" y2="20" style="stroke:#b388ff;stroke-width:1.2" />
+      <line x1="-15" y1="-6" x2="15" y2="-6" style="stroke:#b388ff;stroke-width:1" />
+      <line x1="-18" y1="12" x2="18" y2="12" style="stroke:#b388ff;stroke-width:1" />
+      <line x1="0" y1="-18" x2="0" y2="4" style="stroke:#b388ff;stroke-width:1" />
+      <line x1="0" y1="4" x2="-8" y2="20" style="stroke:#b388ff;stroke-width:0.8" />
+      <line x1="0" y1="4" x2="8" y2="20" style="stroke:#b388ff;stroke-width:0.8" />
+    </g>
+
+    <!-- Inner network: nodes -->
+    <circle cx="0" cy="-18" r="4" style="fill:#b388ff" filter="url(#blur1)" />
+    <circle cx="0" cy="-18" r="2.5" style="fill:#e8d5ff" />
+    <circle cx="-15" cy="-6" r="3.5" style="fill:#7c4dff" filter="url(#blur1)" />
+    <circle cx="-15" cy="-6" r="2" style="fill:#d4c0ff" />
+    <circle cx="15" cy="-6" r="3.5" style="fill:#7c4dff" filter="url(#blur1)" />
+    <circle cx="15" cy="-6" r="2" style="fill:#d4c0ff" />
+    <circle cx="-18" cy="12" r="3" style="fill:#6c63ff" filter="url(#blur1)" />
+    <circle cx="-18" cy="12" r="1.8" style="fill:#c8b8ff" />
+    <circle cx="18" cy="12" r="3" style="fill:#6c63ff" filter="url(#blur1)" />
+    <circle cx="18" cy="12" r="1.8" style="fill:#c8b8ff" />
+    <circle cx="-8" cy="20" r="2.5" style="fill:#448aff" filter="url(#blur1)" />
+    <circle cx="-8" cy="20" r="1.5" style="fill:#c0d8ff" />
+    <circle cx="8" cy="20" r="2.5" style="fill:#448aff" filter="url(#blur1)" />
+    <circle cx="8" cy="20" r="1.5" style="fill:#c0d8ff" />
+    <circle cx="0" cy="4" r="3" style="fill:#9c7cff" filter="url(#blur1)" />
+    <circle cx="0" cy="4" r="1.8" style="fill:#e0d5ff" />
+  </g>
+
+  <!-- Title text -->
+  <text x="400" y="82" style="font-family:'Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif;font-size:52px;font-weight:700;fill:url(#glow);text-anchor:middle;letter-spacing:6px">ENGRAM</text>
+
+  <!-- Subtitle -->
+  <text x="400" y="118" style="font-family:'Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif;font-size:16px;font-weight:300;fill:#8b7fc7;text-anchor:middle;letter-spacing:4px">PERSONAL SEMANTIC MEMORY FOR AI</text>
+
+  <!-- Decorative line under subtitle -->
+  <line x1="300" y1="132" x2="500" y2="132" style="stroke:url(#glow);stroke-width:1;opacity:0.3" />
+
+  <!-- Bottom tagline -->
+  <text x="400" y="160" style="font-family:'Segoe UI',system-ui,-apple-system,Helvetica,Arial,sans-serif;font-size:11px;font-weight:400;fill:#5a5080;text-anchor:middle;letter-spacing:2px">POSTGRESQL + PGVECTOR + MCP + EMBEDDINGS</text>
+</svg>
