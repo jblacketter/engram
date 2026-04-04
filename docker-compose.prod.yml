@@ -8,6 +8,11 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
       - ./certs:/etc/nginx/certs:ro
       - staticfiles:/app/staticfiles:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     depends_on:
       - django
       - mcp
@@ -28,6 +33,12 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health/')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   mcp:
     build:
@@ -43,6 +54,12 @@ services:
         condition: service_healthy
     expose:
       - "8080"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/mcp')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   db:
     image: pgvector/pgvector:pg16
@@ -74,6 +91,11 @@ services:
               capabilities: [gpu]
     expose:
       - "11434"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   pgdata:

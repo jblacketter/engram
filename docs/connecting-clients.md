@@ -10,7 +10,7 @@ See [Docker Setup](setup-docker.md#step-3-connect-claude-desktop) or [Supabase S
 
 ```bash
 # Add via CLI
-claude mcp add open-brain http://localhost:8080/mcp
+claude mcp add engram http://localhost:8080/mcp
 ```
 
 Or add to `.claude/settings.json` in your project:
@@ -18,7 +18,7 @@ Or add to `.claude/settings.json` in your project:
 ```json
 {
   "mcpServers": {
-    "open-brain": {
+    "engram": {
       "url": "http://localhost:8080/mcp"
     }
   }
@@ -33,7 +33,7 @@ Most MCP-compatible editors use a similar config pattern. Check your editor's MC
 // Cursor: .cursor/mcp.json in your project root
 {
   "mcpServers": {
-    "open-brain": {
+    "engram": {
       "url": "http://localhost:8080/mcp"
     }
   }
@@ -48,13 +48,13 @@ You can also query the REST API directly from any application:
 import httpx
 
 # Store a memory
-httpx.post("http://localhost:8000/memories", json={
+httpx.post("http://localhost:8000/api/memories/", json={
     "content": "Important insight from today",
     "source": "manual",
     "tags": ["insight"]
 })
 
 # Search
-results = httpx.get("http://localhost:8000/search",
-    params={"query": "insights", "limit": 5})
+results = httpx.post("http://localhost:8000/api/search/",
+    json={"query": "insights", "limit": 5})
 ```

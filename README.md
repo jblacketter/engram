@@ -7,6 +7,7 @@
 </p>
 
 <p align="center">
+  <a href="https://pypi.org/project/engram-ai/"><img src="https://img.shields.io/pypi/v/engram-ai?color=blue&logo=pypi&logoColor=white" alt="PyPI" /></a>
   <img src="https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white" alt="Python 3.12+" />
   <img src="https://img.shields.io/badge/django-5.1-092E20?logo=django&logoColor=white" alt="Django 5" />
   <img src="https://img.shields.io/badge/postgresql-16+pgvector-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL + pgvector" />
@@ -67,7 +68,10 @@ Engram is a personal knowledge base that stores your notes, conversations, docum
 **Prerequisites:** Python 3.12+, PostgreSQL 16 with pgvector, Ollama (or Docker)
 
 ```bash
-# 1. Clone and enter
+# Install from PyPI
+pip install engram-ai
+
+# Or clone for development
 git clone https://github.com/jblacketter/engram.git && cd engram
 
 # 2. Start database + Ollama via Docker
@@ -113,7 +117,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 {
   "mcpServers": {
     "engram": {
-      "url": "http://localhost:8080/sse"
+      "url": "http://localhost:8080/mcp"
     }
   }
 }
@@ -122,7 +126,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ### Claude Code
 
 ```bash
-claude mcp add engram http://localhost:8080/sse
+claude mcp add engram http://localhost:8080/mcp
 ```
 
 ### Cursor / Windsurf
@@ -133,7 +137,7 @@ Add to your MCP settings:
 {
   "mcpServers": {
     "engram": {
-      "url": "http://localhost:8080/sse"
+      "url": "http://localhost:8080/mcp"
     }
   }
 }
@@ -242,6 +246,7 @@ This starts PostgreSQL, Ollama (with GPU support), Django (gunicorn), the MCP se
 | [Schema](docs/schema.md) | Database schema deep dive |
 | [Workflows](docs/workflows.md) | Daily capture and search patterns |
 | [Extending](docs/extending.md) | Adding providers, tools, and importers |
+| [Windows LAN Deploy](docs/deploy-windows-lan.md) | Deploy on a Windows server for home LAN access |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and fixes |
 | [Roadmap](docs/roadmap.md) | Feature roadmap |
 

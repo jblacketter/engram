@@ -1,7 +1,20 @@
 [project]
-name = "engram"
-version = "0.1.0"
-description = "Local, privacy-focused personal semantic memory system"
+name = "engram-ai"
+version = "1.0.0"
+description = "Self-hosted semantic memory layer for AI tools. MCP-native, privacy-first, hybrid search."
+license = {text = "MIT"}
+readme = "README.md"
+authors = [{name = "Jack Blacketter"}]
+keywords = ["ai", "memory", "mcp", "semantic-search", "pgvector", "embeddings", "rag"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Django",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
 requires-python = ">=3.12"
 dependencies = [
     "django>=5.1,<6.0",
@@ -15,6 +28,13 @@ dependencies = [
     "drf-spectacular>=0.28,<1.0",
     "pdfminer.six>=20231228,<20260101",
 ]
+
+[project.urls]
+Homepage = "https://github.com/jblacketter/engram"
+Documentation = "https://github.com/jblacketter/engram/tree/main/docs"
+Repository = "https://github.com/jblacketter/engram"
+Issues = "https://github.com/jblacketter/engram/issues"
+Changelog = "https://github.com/jblacketter/engram/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 prod = [
