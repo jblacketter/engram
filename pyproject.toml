@@ -1,5 +1,5 @@
 [project]
-name = "engram-ai"
+name = "engram-semantic"
 version = "1.0.0"
 description = "Self-hosted semantic memory layer for AI tools. MCP-native, privacy-first, hybrid search."
 license = {text = "MIT"}

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/engram-ai/"><img src="https://img.shields.io/pypi/v/engram-ai?color=blue&logo=pypi&logoColor=white" alt="PyPI" /></a>
+  <a href="https://pypi.org/project/engram-semantic/"><img src="https://img.shields.io/pypi/v/engram-semantic?color=blue&logo=pypi&logoColor=white" alt="PyPI" /></a>
   <img src="https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white" alt="Python 3.12+" />
   <img src="https://img.shields.io/badge/django-5.1-092E20?logo=django&logoColor=white" alt="Django 5" />
   <img src="https://img.shields.io/badge/postgresql-16+pgvector-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL + pgvector" />
@@ -69,7 +69,7 @@ Engram is a personal knowledge base that stores your notes, conversations, docum
 
 ```bash
 # Install from PyPI
-pip install engram-ai
+pip install engram-semantic
 
 # Or clone for development
 git clone https://github.com/jblacketter/engram.git && cd engram
