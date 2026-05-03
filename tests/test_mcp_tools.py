@@ -47,7 +47,7 @@ class TestStoreMemory:
         with patch("mcp_server.tools.memory.memory_service") as svc:
             svc.create_memory = AsyncMock(return_value=mem)
             from mcp_server.tools.memory import store_memory
-            result = await store_memory("Hello world")
+            result = await store_memory.fn("Hello world")
 
             svc.create_memory.assert_called_once_with(
                 content="Hello world",
@@ -65,7 +65,7 @@ class TestStoreMemory:
         with patch("mcp_server.tools.memory.memory_service") as svc:
             svc.create_memory = AsyncMock(return_value=mem)
             from mcp_server.tools.memory import store_memory
-            await store_memory("Content")
+            await store_memory.fn("Content")
 
             call_kwargs = svc.create_memory.call_args.kwargs
             assert call_kwargs["source"] == "mcp"
@@ -75,7 +75,7 @@ class TestStoreMemory:
         with patch("mcp_server.tools.memory.memory_service") as svc:
             svc.create_memory = AsyncMock(side_effect=httpx.ConnectError("refused"))
             from mcp_server.tools.memory import store_memory
-            result = await store_memory("Content")
+            result = await store_memory.fn("Content")
 
             assert "unavailable" in result.lower()
 
@@ -91,7 +91,7 @@ class TestGetMemory:
         with patch("mcp_server.tools.memory.memory_service") as svc:
             svc.get_memory = AsyncMock(return_value=mem)
             from mcp_server.tools.memory import get_memory
-            result = await get_memory(str(mem.id))
+            result = await get_memory.fn(str(mem.id))
 
             data = json.loads(result)
             assert data["id"] == str(mem.id)
@@ -102,14 +102,14 @@ class TestGetMemory:
         with patch("mcp_server.tools.memory.memory_service") as svc:
             svc.get_memory = AsyncMock(side_effect=Memory.DoesNotExist)
             from mcp_server.tools.memory import get_memory
-            result = await get_memory(str(uuid.uuid4()))
+            result = await get_memory.fn(str(uuid.uuid4()))
 
             assert "not found" in result.lower()
 
     @pytest.mark.asyncio
     async def test_get_invalid_uuid(self):
         from mcp_server.tools.memory import get_memory
-        result = await get_memory("not-a-uuid")
+        result = await get_memory.fn("not-a-uuid")
         assert "invalid" in result.lower()
 
 
@@ -124,7 +124,7 @@ class TestUpdateMemory:
         with patch("mcp_server.tools.memory.memory_service") as svc:
             svc.update_memory = AsyncMock(return_value=mem)
             from mcp_server.tools.memory import update_memory
-            result = await update_memory(str(mem.id), content="New content")
+            result = await update_memory.fn(str(mem.id), content="New content")
 
             svc.update_memory.assert_called_once_with(mem.id, content="New content")
             data = json.loads(result)
@@ -133,7 +133,7 @@ class TestUpdateMemory:
     @pytest.mark.asyncio
     async def test_update_no_fields_returns_message(self):
         from mcp_server.tools.memory import update_memory
-        result = await update_memory(str(uuid.uuid4()))
+        result = await update_memory.fn(str(uuid.uuid4()))
         assert "no fields" in result.lower()
 
     @pytest.mark.asyncio
@@ -141,7 +141,7 @@ class TestUpdateMemory:
         with patch("mcp_server.tools.memory.memory_service") as svc:
             svc.update_memory = AsyncMock(side_effect=Memory.DoesNotExist)
             from mcp_server.tools.memory import update_memory
-            result = await update_memory(str(uuid.uuid4()), content="X")
+            result = await update_memory.fn(str(uuid.uuid4()), content="X")
 
             assert "not found" in result.lower()
 
@@ -157,7 +157,7 @@ class TestDeleteMemory:
         with patch("mcp_server.tools.memory.memory_service") as svc:
             svc.delete_memory = AsyncMock()
             from mcp_server.tools.memory import delete_memory
-            result = await delete_memory(str(mid))
+            result = await delete_memory.fn(str(mid))
 
             assert "deleted" in result.lower()
 
@@ -166,7 +166,7 @@ class TestDeleteMemory:
         with patch("mcp_server.tools.memory.memory_service") as svc:
             svc.delete_memory = AsyncMock(side_effect=Memory.DoesNotExist)
             from mcp_server.tools.memory import delete_memory
-            result = await delete_memory(str(uuid.uuid4()))
+            result = await delete_memory.fn(str(uuid.uuid4()))
 
             assert "not found" in result.lower()
 
@@ -197,7 +197,7 @@ class TestSearchBrain:
         with patch("mcp_server.tools.search.search_service") as svc:
             svc.search = AsyncMock(return_value=results)
             from mcp_server.tools.search import search_brain
-            result = await search_brain("test query")
+            result = await search_brain.fn("test query")
 
             svc.search.assert_called_once()
             data = json.loads(result)
@@ -209,7 +209,7 @@ class TestSearchBrain:
         with patch("mcp_server.tools.search.search_service") as svc:
             svc.search = AsyncMock(return_value=[])
             from mcp_server.tools.search import search_brain
-            result = await search_brain("nothing")
+            result = await search_brain.fn("nothing")
 
             assert "no matching" in result.lower()
 
@@ -218,7 +218,7 @@ class TestSearchBrain:
         with patch("mcp_server.tools.search.search_service") as svc:
             svc.search = AsyncMock(return_value=[])
             from mcp_server.tools.search import search_brain
-            await search_brain("q", limit=5, tags=["a"], source="api", semantic_weight=0.8)
+            await search_brain.fn("q", limit=5, tags=["a"], source="api", semantic_weight=0.8)
 
             call_kwargs = svc.search.call_args.kwargs
             assert call_kwargs["limit"] == 5
@@ -242,7 +242,7 @@ class TestFindRelated:
             mem_svc.get_memory = AsyncMock(return_value=mem)
             search_svc.search = AsyncMock(return_value=[])
             from mcp_server.tools.search import find_related
-            await find_related(str(mem.id))
+            await find_related.fn(str(mem.id))
 
             call_kwargs = search_svc.search.call_args.kwargs
             assert call_kwargs["semantic_weight"] == 1.0
@@ -273,7 +273,94 @@ class TestFindRelated:
             mem_svc.get_memory = AsyncMock(return_value=mem)
             search_svc.search = AsyncMock(return_value=results)
             from mcp_server.tools.search import find_related
-            result = await find_related(str(mem.id))
+            result = await find_related.fn(str(mem.id))
+
+            data = json.loads(result)
+            ids = [r["id"] for r in data]
+            assert str(mem.id) not in ids
+            assert str(other_id) in ids
+
+    @pytest.mark.asyncio
+    async def test_find_related_no_filter_args_unchanged_behavior(self):
+        """Regression: calling find_related without tags/source must pass None
+        for both filters (preserving the pre-scoping default behavior)."""
+        mem = _make_memory()
+        with (
+            patch("mcp_server.tools.search.memory_service") as mem_svc,
+            patch("mcp_server.tools.search.search_service") as search_svc,
+        ):
+            mem_svc.get_memory = AsyncMock(return_value=mem)
+            search_svc.search = AsyncMock(return_value=[])
+            from mcp_server.tools.search import find_related
+            await find_related.fn(str(mem.id))
+
+            call_kwargs = search_svc.search.call_args.kwargs
+            assert call_kwargs["tags"] is None
+            assert call_kwargs["source"] is None
+
+    @pytest.mark.asyncio
+    async def test_find_related_forwards_tags_filter(self):
+        mem = _make_memory()
+        with (
+            patch("mcp_server.tools.search.memory_service") as mem_svc,
+            patch("mcp_server.tools.search.search_service") as search_svc,
+        ):
+            mem_svc.get_memory = AsyncMock(return_value=mem)
+            search_svc.search = AsyncMock(return_value=[])
+            from mcp_server.tools.search import find_related
+            await find_related.fn(str(mem.id), tags=["domain:qa"])
+
+            call_kwargs = search_svc.search.call_args.kwargs
+            assert call_kwargs["tags"] == ["domain:qa"]
+            assert call_kwargs["source"] is None
+            assert call_kwargs["semantic_weight"] == 1.0
+
+    @pytest.mark.asyncio
+    async def test_find_related_forwards_source_filter(self):
+        mem = _make_memory()
+        with (
+            patch("mcp_server.tools.search.memory_service") as mem_svc,
+            patch("mcp_server.tools.search.search_service") as search_svc,
+        ):
+            mem_svc.get_memory = AsyncMock(return_value=mem)
+            search_svc.search = AsyncMock(return_value=[])
+            from mcp_server.tools.search import find_related
+            await find_related.fn(str(mem.id), source="aegis")
+
+            call_kwargs = search_svc.search.call_args.kwargs
+            assert call_kwargs["source"] == "aegis"
+            assert call_kwargs["tags"] is None
+
+    @pytest.mark.asyncio
+    async def test_find_related_excludes_self_under_filters(self):
+        """Self-exclusion must hold even when tag/source filters are applied
+        (the search service may return the source memory if it matches the filter)."""
+        mem = _make_memory(tags=["domain:qa"])
+        other_id = uuid.uuid4()
+        results = [
+            {"id": mem.id, "content": "self", "rrf_score": 0.02,
+             "source": "aegis", "tags": ["domain:qa"], "metadata": {},
+             "importance": 0.5, "decay_factor": 1.0, "access_count": 0,
+             "last_accessed": None,
+             "created_at": datetime(2026, 3, 3, tzinfo=timezone.utc),
+             "updated_at": datetime(2026, 3, 3, tzinfo=timezone.utc)},
+            {"id": other_id, "content": "related", "rrf_score": 0.01,
+             "source": "aegis", "tags": ["domain:qa"], "metadata": {},
+             "importance": 0.5, "decay_factor": 1.0, "access_count": 0,
+             "last_accessed": None,
+             "created_at": datetime(2026, 3, 3, tzinfo=timezone.utc),
+             "updated_at": datetime(2026, 3, 3, tzinfo=timezone.utc)},
+        ]
+        with (
+            patch("mcp_server.tools.search.memory_service") as mem_svc,
+            patch("mcp_server.tools.search.search_service") as search_svc,
+        ):
+            mem_svc.get_memory = AsyncMock(return_value=mem)
+            search_svc.search = AsyncMock(return_value=results)
+            from mcp_server.tools.search import find_related
+            result = await find_related.fn(
+                str(mem.id), tags=["domain:qa"], source="aegis"
+            )
 
             data = json.loads(result)
             ids = [r["id"] for r in data]
@@ -292,9 +379,9 @@ class TestListRecentMemories:
         with patch("mcp_server.tools.search.memory_service") as svc:
             svc.list_recent = AsyncMock(return_value=mems)
             from mcp_server.tools.search import list_recent_memories
-            result = await list_recent_memories(limit=5, source="api")
+            result = await list_recent_memories.fn(limit=5, source="api")
 
-            svc.list_recent.assert_called_once_with(limit=5, source="api")
+            svc.list_recent.assert_called_once_with(limit=5, source="api", tags=None)
             data = json.loads(result)
             assert len(data) == 2
 
@@ -303,9 +390,34 @@ class TestListRecentMemories:
         with patch("mcp_server.tools.search.memory_service") as svc:
             svc.list_recent = AsyncMock(return_value=[])
             from mcp_server.tools.search import list_recent_memories
-            result = await list_recent_memories()
+            result = await list_recent_memories.fn()
 
             assert "no memories" in result.lower()
+
+    @pytest.mark.asyncio
+    async def test_list_recent_no_filter_args_unchanged_behavior(self):
+        """Regression: bare call must forward source=None and tags=None,
+        preserving the pre-scoping default."""
+        with patch("mcp_server.tools.search.memory_service") as svc:
+            svc.list_recent = AsyncMock(return_value=[])
+            from mcp_server.tools.search import list_recent_memories
+            await list_recent_memories.fn()
+
+            call_kwargs = svc.list_recent.call_args.kwargs
+            assert call_kwargs["source"] is None
+            assert call_kwargs["tags"] is None
+
+    @pytest.mark.asyncio
+    async def test_list_recent_forwards_tags_filter(self):
+        mems = [_make_memory(tags=["domain:qa"])]
+        with patch("mcp_server.tools.search.memory_service") as svc:
+            svc.list_recent = AsyncMock(return_value=mems)
+            from mcp_server.tools.search import list_recent_memories
+            await list_recent_memories.fn(tags=["domain:qa"])
+
+            call_kwargs = svc.list_recent.call_args.kwargs
+            assert call_kwargs["tags"] == ["domain:qa"]
+            assert call_kwargs["source"] is None
 
 
 # ---------------------------------------------------------------------------
@@ -322,7 +434,7 @@ class TestGetStats:
                 mock_s2a.side_effect = lambda fn: AsyncMock(return_value=fn())
 
                 from mcp_server.tools.stats import get_stats
-                result = await get_stats()
+                result = await get_stats.fn()
 
                 data = json.loads(result)
                 assert data["total"] == 0
@@ -350,7 +462,7 @@ class TestGetStats:
             mock_s2a.side_effect = lambda fn: AsyncMock(return_value=fn())
 
             from mcp_server.tools.stats import get_stats
-            result = await get_stats()
+            result = await get_stats.fn()
 
             data = json.loads(result)
             assert data["total"] == 42
@@ -410,7 +522,7 @@ class TestDecimalSerialization:
         with patch("mcp_server.tools.search.search_service") as svc:
             svc.search = AsyncMock(return_value=results)
             from mcp_server.tools.search import search_brain
-            result = await search_brain("test")
+            result = await search_brain.fn("test")
 
             # Should produce valid JSON without TypeError
             data = json.loads(result)
@@ -444,7 +556,7 @@ class TestDecimalSerialization:
             mem_svc.get_memory = AsyncMock(return_value=mem)
             search_svc.search = AsyncMock(return_value=results)
             from mcp_server.tools.search import find_related
-            result = await find_related(str(mem.id))
+            result = await find_related.fn(str(mem.id))
 
             data = json.loads(result)
             assert isinstance(data[0]["rrf_score"], float)

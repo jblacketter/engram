@@ -136,3 +136,139 @@ class TestListRecent:
 
         results = await memory_service.list_recent(limit=3)
         assert len(results) == 3
+
+    @pytest.mark.asyncio
+    async def test_list_recent_filters_by_tags(self):
+        await memory_service.create_memory("QA one", tags=["domain:qa"])
+        await memory_service.create_memory("Personal one", tags=["domain:personal"])
+        await memory_service.create_memory("Untagged")
+
+        results = await memory_service.list_recent(tags=["domain:qa"])
+        assert len(results) == 1
+        assert results[0].content == "QA one"
+
+    @pytest.mark.asyncio
+    async def test_list_recent_no_tag_filter_returns_all(self):
+        """Regression: list_recent() with no tags arg must return all memories,
+        unchanged from pre-scoping behavior."""
+        await memory_service.create_memory("QA one", tags=["domain:qa"])
+        await memory_service.create_memory("Personal one", tags=["domain:personal"])
+
+        results = await memory_service.list_recent()
+        assert len(results) == 2
+
+    @pytest.mark.asyncio
+    async def test_list_recent_combines_source_and_tags(self):
+        await memory_service.create_memory(
+            "QA from aegis", source="aegis", tags=["domain:qa"]
+        )
+        await memory_service.create_memory(
+            "QA from manual", source="manual", tags=["domain:qa"]
+        )
+
+        results = await memory_service.list_recent(
+            source="aegis", tags=["domain:qa"]
+        )
+        assert len(results) == 1
+        assert results[0].source == "aegis"
+
+
+class TestListRecentFilterChain:
+    """Non-DB unit tests proving the QuerySet filter chain orchestration.
+    These complement the @pytest.mark.django_db tests in TestListRecent
+    (which require a live Postgres connection) so the filter wiring is
+    verifiable in any environment.
+    """
+
+    def _mock_qs(self):
+        from unittest.mock import MagicMock
+        qs = MagicMock(name="qs")
+        qs.order_by.return_value = qs
+        qs.filter.return_value = qs
+        qs.__getitem__.return_value = []
+        return qs
+
+    @pytest.mark.asyncio
+    async def test_list_recent_no_args_applies_no_filter(self):
+        from unittest.mock import AsyncMock, patch
+        qs = self._mock_qs()
+        with (
+            patch("core.services.memory_service.Memory") as MockMem,
+            patch("core.services.memory_service.sync_to_async",
+                  return_value=AsyncMock(return_value=[])),
+        ):
+            MockMem.objects = qs
+            await memory_service.list_recent()
+
+            qs.order_by.assert_called_once_with("-created_at")
+            qs.filter.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_list_recent_tags_applies_tags_contains(self):
+        from unittest.mock import AsyncMock, patch
+        qs = self._mock_qs()
+        with (
+            patch("core.services.memory_service.Memory") as MockMem,
+            patch("core.services.memory_service.sync_to_async",
+                  return_value=AsyncMock(return_value=[])),
+        ):
+            MockMem.objects = qs
+            await memory_service.list_recent(tags=["domain:qa"])
+
+            calls = qs.filter.call_args_list
+            assert any(
+                c.kwargs == {"tags__contains": ["domain:qa"]} for c in calls
+            ), f"Expected tags__contains filter; got {calls}"
+            assert not any("source" in c.kwargs for c in calls)
+
+    @pytest.mark.asyncio
+    async def test_list_recent_source_only_does_not_apply_tags_filter(self):
+        from unittest.mock import AsyncMock, patch
+        qs = self._mock_qs()
+        with (
+            patch("core.services.memory_service.Memory") as MockMem,
+            patch("core.services.memory_service.sync_to_async",
+                  return_value=AsyncMock(return_value=[])),
+        ):
+            MockMem.objects = qs
+            await memory_service.list_recent(source="aegis")
+
+            calls = qs.filter.call_args_list
+            assert any(c.kwargs == {"source": "aegis"} for c in calls)
+            assert not any("tags__contains" in c.kwargs for c in calls)
+
+    @pytest.mark.asyncio
+    async def test_list_recent_source_and_tags_applies_both_filters(self):
+        from unittest.mock import AsyncMock, patch
+        qs = self._mock_qs()
+        with (
+            patch("core.services.memory_service.Memory") as MockMem,
+            patch("core.services.memory_service.sync_to_async",
+                  return_value=AsyncMock(return_value=[])),
+        ):
+            MockMem.objects = qs
+            await memory_service.list_recent(
+                source="aegis", tags=["domain:qa"]
+            )
+
+            calls = qs.filter.call_args_list
+            assert qs.filter.call_count == 2
+            assert any(c.kwargs == {"source": "aegis"} for c in calls)
+            assert any(
+                c.kwargs == {"tags__contains": ["domain:qa"]} for c in calls
+            )
+
+    @pytest.mark.asyncio
+    async def test_list_recent_empty_tags_list_skipped(self):
+        """Defensive: tags=[] is falsy, so no tags filter should be added."""
+        from unittest.mock import AsyncMock, patch
+        qs = self._mock_qs()
+        with (
+            patch("core.services.memory_service.Memory") as MockMem,
+            patch("core.services.memory_service.sync_to_async",
+                  return_value=AsyncMock(return_value=[])),
+        ):
+            MockMem.objects = qs
+            await memory_service.list_recent(tags=[])
+
+            qs.filter.assert_not_called()

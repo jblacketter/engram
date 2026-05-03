@@ -72,8 +72,15 @@ async def delete_memory(memory_id: UUID) -> None:
         raise Memory.DoesNotExist
 
 
-async def list_recent(limit: int = 20, source: str | None = None) -> list[Memory]:
+async def list_recent(
+    limit: int = 20,
+    source: str | None = None,
+    tags: list[str] | None = None,
+) -> list[Memory]:
     qs = Memory.objects.order_by("-created_at")
     if source is not None:
         qs = qs.filter(source=source)
+    if tags:
+        # All-of semantics matching build_hybrid_query (jsonb @> operator)
+        qs = qs.filter(tags__contains=tags)
     return await sync_to_async(list)(qs[:limit])

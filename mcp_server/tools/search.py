@@ -51,9 +51,17 @@ async def search_brain(
 
 
 @mcp.tool()
-async def find_related(memory_id: str, limit: int = 5) -> str:
+async def find_related(
+    memory_id: str,
+    limit: int = 5,
+    tags: list[str] | None = None,
+    source: str | None = None,
+) -> str:
     """Find memories related to a specific memory. Uses the memory's content
-    as a search query with pure semantic search (weight=1.0)."""
+    as a search query with pure semantic search (weight=1.0).
+
+    Optional `tags` and `source` filters scope results — see the README
+    section "Scoping memories across domains"."""
     try:
         uid = UUID(memory_id)
     except ValueError:
@@ -67,6 +75,8 @@ async def find_related(memory_id: str, limit: int = 5) -> str:
         results = await search_service.search(
             query=mem.content,
             limit=limit + 1,  # fetch extra to exclude self
+            tags=tags,
+            source=source,
             semantic_weight=1.0,
         )
         # Exclude the source memory from results
@@ -79,9 +89,14 @@ async def find_related(memory_id: str, limit: int = 5) -> str:
 
 
 @mcp.tool()
-async def list_recent_memories(limit: int = 20, source: str | None = None) -> str:
-    """List the most recently created memories, optionally filtered by source."""
-    memories = await memory_service.list_recent(limit=limit, source=source)
+async def list_recent_memories(
+    limit: int = 20,
+    source: str | None = None,
+    tags: list[str] | None = None,
+) -> str:
+    """List the most recently created memories, optionally filtered by source
+    and/or tags — see the README section "Scoping memories across domains"."""
+    memories = await memory_service.list_recent(limit=limit, source=source, tags=tags)
     if not memories:
         return "No memories found."
     data = [

@@ -174,12 +174,80 @@ Auth: `Authorization: Bearer <REST_API_KEY>` (disabled when env var is empty).
 | `get_memory` | Retrieve a memory by UUID |
 | `update_memory` | Update content, tags, or importance |
 | `delete_memory` | Delete a memory |
-| `search_brain` | Hybrid search with configurable semantic/keyword weight |
-| `find_related` | Find semantically similar memories |
-| `list_recent_memories` | List recent memories, optionally filtered by source |
+| `search_brain` | Hybrid search with configurable semantic/keyword weight, filterable by `tags` and `source` |
+| `find_related` | Find semantically similar memories, filterable by `tags` and `source` |
+| `list_recent_memories` | List recent memories, optionally filtered by `source` and/or `tags` |
 | `store_from_url` | Fetch and ingest a URL |
 | `ingest_file` | Ingest a base64-encoded file |
 | `get_stats` | System statistics |
+
+## Scoping memories across domains
+
+A single Engram instance can host memories from multiple domains (e.g. QA-tool
+output and personal notes) without cross-contamination, using tag-based **soft
+scoping**. The convention is documented here so any client can follow it.
+
+### The convention
+
+Every write should set two things:
+
+1. A **scoping tag** in the `tags` field — `domain:<name>`, optionally
+   refined with `project:<slug>`. Examples:
+   - `tags=["domain:qa", "project:my-app"]`
+   - `tags=["domain:personal"]`
+2. The **`source` field** — already part of the schema — to identify the
+   *writer* (e.g. `"aegis"`, `"qaagent"`, `"mcp"`, `"manual"`). `source` is a
+   distinct top-level field, not a tag; the two are complementary.
+
+### Reading with scope
+
+The MCP tools and REST search honor these on read. Examples:
+
+```python
+# MCP
+await search_brain("flaky test", tags=["domain:qa"])
+await find_related(memory_id, tags=["domain:qa"])
+await list_recent_memories(tags=["domain:qa"])
+
+# REST
+POST /api/search/  {"query": "flaky test", "tags": ["domain:qa"]}
+```
+
+### Scoped read surfaces (filterable)
+
+The following read surfaces accept `tags` and/or `source` filters, so callers
+that pass them can stay inside one domain:
+
+| Surface | `tags` | `source` |
+|---|---|---|
+| MCP `search_brain` | yes | yes |
+| MCP `find_related` | yes | yes |
+| MCP `list_recent_memories` | yes | yes |
+| REST `POST /api/search/` | yes | yes |
+
+### Residual surfaces (intentionally unscoped)
+
+These surfaces return data across all domains regardless of caller. They are
+acceptable for a single-user instance; if you ever expose Engram beyond a
+trusted boundary, treat them as gaps to close:
+
+- **REST `GET /api/memories/`** — paginated memory list, no filter args.
+- **REST `GET /api/memories/<id>/`** — direct fetch by UUID; no tag check.
+- **REST `GET /api/stats/`** — counts and date range across all memories.
+- **REST `GET /api/tags/`** — full tag enumeration across all domains.
+- **MCP `get_stats`** — same as the REST stats endpoint.
+- **MCP `get_memory`** — direct UUID fetch; no tag check.
+- **React dashboard** — single-user view that displays all memories,
+  recent-feed, and analytics across all domains.
+
+### Limits of soft scoping
+
+- **Discipline-based.** Engram does not enforce that writes carry a domain
+  tag. Clients that omit it produce un-scopable memories.
+- **No per-user auth.** The instance is single-user; auth is global API-key.
+- **No migrations involved.** No `workspace`/`tenant` field exists. If you
+  later need hard isolation, options are: run two Engram instances on
+  separate databases, or add a `workspace` schema column.
 
 ## Project Structure
 
