@@ -60,7 +60,11 @@ PROJECT_TEMPLATE = """\
 
 
 class IdentityFileError(Exception):
-    """A file failed the size/encoding contract."""
+    """A file failed the size/encoding/containment contract."""
+
+
+class IdentityFileMissing(IdentityFileError):
+    """The requested identity file does not exist (or escapes the root)."""
 
 
 def identity_root() -> Path:
@@ -70,39 +74,90 @@ def identity_root() -> Path:
 def scaffold(root: Path) -> list[str]:
     """Create the directory structure + placeholder templates.
 
-    Never overwrites an existing file. Returns relative paths created.
+    Never overwrites an existing file, and fails safely (writing nothing
+    further) if any component is a symlink, a non-directory, or resolves
+    outside the root — a pre-existing symlinked subdirectory must not let
+    init_identity create files elsewhere on the host.
     """
-    created = []
     root.mkdir(parents=True, exist_ok=True)
-    (root / "context").mkdir(exist_ok=True)
-    (root / "projects").mkdir(exist_ok=True)
+    resolved_root = root.resolve()
+    for sub in ("context", "projects"):
+        directory = root / sub
+        if directory.is_symlink() or (directory.exists() and not directory.is_dir()):
+            raise IdentityFileError(f"{sub}: exists and is not a real directory")
+        directory.mkdir(exist_ok=True)
+        if not directory.resolve().is_relative_to(resolved_root):
+            raise IdentityFileError(f"{sub}: escapes the identity directory")
+
+    created = []
     for relpath, template in (
         ("identity.md", IDENTITY_TEMPLATE),
         ("context/example.md", CONTEXT_TEMPLATE),
         ("projects/example.md", PROJECT_TEMPLATE),
     ):
         target = root / relpath
-        if not target.exists():
-            target.write_text(template, encoding="utf-8")
-            created.append(relpath)
+        if target.is_symlink():
+            # never write through a symlink, even an existing one
+            raise IdentityFileError(f"{relpath}: is a symlink; refusing to touch it")
+        if target.exists():
+            continue
+        if not target.parent.resolve().is_relative_to(resolved_root):
+            raise IdentityFileError(f"{relpath}: parent escapes the identity directory")
+        target.write_text(template, encoding="utf-8")
+        created.append(relpath)
     return created
 
 
 def read_file_checked(path: Path) -> str:
-    """Read a file enforcing the size/encoding contract.
+    """Read a file enforcing the size/encoding contract with bounded I/O.
 
-    Size is checked on raw bytes BEFORE decoding: exactly MAX_FILE_BYTES
-    is allowed, one more byte is rejected.
+    The size is checked via stat BEFORE reading, and the read itself is
+    bounded to MAX_FILE_BYTES + 1 with a post-read re-check (covers a file
+    growing between stat and read). Exactly MAX_FILE_BYTES is allowed, one
+    more byte is rejected. OS errors become the documented friendly error.
     """
-    raw = path.read_bytes()
+    try:
+        size = path.stat().st_size
+    except OSError as exc:
+        raise IdentityFileError(f"{path.name}: unreadable ({type(exc).__name__})") from exc
+    if size > MAX_FILE_BYTES:
+        raise IdentityFileError(
+            f"{path.name}: {size} bytes exceeds the {MAX_FILE_BYTES}-byte limit"
+        )
+    try:
+        with open(path, "rb") as fh:
+            raw = fh.read(MAX_FILE_BYTES + 1)
+    except OSError as exc:
+        raise IdentityFileError(f"{path.name}: unreadable ({type(exc).__name__})") from exc
     if len(raw) > MAX_FILE_BYTES:
         raise IdentityFileError(
-            f"{path.name}: {len(raw)} bytes exceeds the {MAX_FILE_BYTES}-byte limit"
+            f"{path.name}: exceeds the {MAX_FILE_BYTES}-byte limit"
         )
     try:
         return raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise IdentityFileError(f"{path.name}: not valid UTF-8 ({exc})") from exc
+
+
+def safe_read(root: Path, relpath: str) -> str:
+    """The shared containment-checked bounded read.
+
+    Every identity-file read (sync scanning aside, which has its own
+    containment) MUST go through this: resources, onboarding, tools.
+    Raises IdentityFileMissing for absent/escaping paths and
+    IdentityFileError for size/encoding/OS failures.
+    """
+    target = root / relpath
+    try:
+        resolved_root = root.resolve()
+        resolved = target.resolve()
+        if not resolved.is_relative_to(resolved_root):
+            raise IdentityFileMissing(f"{relpath}: escapes the identity directory")
+    except OSError as exc:
+        raise IdentityFileMissing(f"{relpath}: unresolvable ({type(exc).__name__})") from exc
+    if not resolved.is_file():
+        raise IdentityFileMissing(f"{relpath}: not found")
+    return read_file_checked(resolved)
 
 
 def scan_files(root: Path) -> tuple[list[tuple[str, Path]], list[str]]:

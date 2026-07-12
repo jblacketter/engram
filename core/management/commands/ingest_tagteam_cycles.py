@@ -40,5 +40,6 @@ class Command(BaseCommand):
             for entry in entries:
                 self.stdout.write(f"  {entry}")
         self.stdout.write(f"malformed_lines: {report['malformed_lines']}")
-        if report["errors"]:
-            raise SystemExit(1)
+        # Per the approved plan: only an unreadable --repo is a non-zero
+        # prerequisite failure. Broken individual exports are reported
+        # above without discarding successfully processed cycles.

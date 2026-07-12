@@ -140,3 +140,32 @@ class TestIngest:
     async def test_empty_repo_reports_zero_files(self, tmp_path):
         report = await tagteam_ingest.ingest_repo(tmp_path, domain="empty")
         assert report["files"] == 0 and not report["created"]
+
+
+@pytest.mark.django_db(transaction=True)
+class TestPerFileIsolation:
+    @pytest.mark.asyncio
+    async def test_unreadable_export_counted_not_fatal(self, tmp_path):
+        repo = tmp_path / "repo"
+        (repo / "docs" / "handoffs").mkdir(parents=True)
+        good = repo / "docs/handoffs/revive-and-verify_plan_rounds.jsonl"
+        shutil.copy(
+            FIXTURES / "tagteam_repo_a/docs/handoffs/revive-and-verify_plan_rounds.jsonl",
+            good,
+        )
+        bad = repo / "docs/handoffs/broken_impl_rounds.jsonl"
+        bad.write_text("{}")
+
+        real_read_bytes = Path.read_bytes
+
+        def flaky_read(self):
+            if self.name == "broken_impl_rounds.jsonl":
+                raise OSError("disk error")
+            return real_read_bytes(self)
+
+        with patch.object(Path, "read_bytes", flaky_read):
+            report = await ingest_repo(repo, domain="isolated")
+
+        assert len(report["errors"]) == 1
+        assert "broken_impl_rounds.jsonl" in report["errors"][0]
+        assert len(report["created"]) == 1  # the good file still processed

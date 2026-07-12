@@ -35,14 +35,19 @@ def normalize_domain(name: str) -> str | None:
 
 
 def parse_rounds(path: Path) -> tuple[list[dict], int]:
-    """Parse a rounds JSONL export defensively.
+    """Parse a rounds JSONL export defensively (see parse_rounds_text)."""
+    return parse_rounds_text(path.read_text(encoding="utf-8", errors="replace"))
+
+
+def parse_rounds_text(text: str) -> tuple[list[dict], int]:
+    """Parse rounds JSONL text defensively.
 
     Returns (rounds, malformed_line_count). Unknown keys are tolerated;
     malformed lines are skipped and counted.
     """
     rounds: list[dict] = []
     malformed = 0
-    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+    for line in text.splitlines():
         line = line.strip()
         if not line:
             continue
@@ -106,12 +111,19 @@ async def ingest_repo(repo: Path, domain: str | None = None) -> dict:
         ctype = name_match.group("ctype")
         relpath = str(path.relative_to(repo))
 
-        raw = path.read_bytes()
-        sha = hashlib.sha256(raw).hexdigest()
-        rounds, malformed = parse_rounds(path)
-        report["malformed_lines"] += malformed
+        # All per-export I/O and parsing is isolated: one disappearing or
+        # unreadable file is a counted error, never a batch abort.
+        try:
+            raw = path.read_bytes()
+            sha = hashlib.sha256(raw).hexdigest()
+            # parse the bytes we hashed — no second read, no race
+            rounds, malformed = parse_rounds_text(raw.decode("utf-8", errors="replace"))
+            report["malformed_lines"] += malformed
+            content = summarize_cycle(phase, ctype, rounds)
+        except OSError as exc:
+            report["errors"].append(f"{path.name}: {type(exc).__name__}: {exc}")
+            continue
 
-        content = summarize_cycle(phase, ctype, rounds)
         if content is None:
             report["not_approved"].append(path.name)
             continue

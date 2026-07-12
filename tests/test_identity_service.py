@@ -293,3 +293,90 @@ class TestSync:
         assert not report["updated"] and not report["orphaned"]
         rows = await memory_service.list_recent(tags=["type:identity"])
         assert rows[0].content == "v1"
+
+
+# ---------------------------------------------------------------------------
+# Hardening: safe_read, bounded I/O, scaffold containment
+# ---------------------------------------------------------------------------
+
+class TestSafeRead:
+    def test_reads_contained_file(self, tmp_path):
+        (tmp_path / "identity.md").write_text("me")
+        assert identity_service.safe_read(tmp_path, "identity.md") == "me"
+
+    def test_symlinked_identity_file_rejected(self, tmp_path):
+        secret = tmp_path / "outside-secret.md"
+        secret.write_text("TOP SECRET")
+        root = tmp_path / "identity"
+        root.mkdir()
+        os.symlink(secret, root / "identity.md")
+        with pytest.raises(identity_service.IdentityFileMissing, match="escapes"):
+            identity_service.safe_read(root, "identity.md")
+
+    def test_missing_file_raises_missing(self, tmp_path):
+        with pytest.raises(identity_service.IdentityFileMissing, match="not found"):
+            identity_service.safe_read(tmp_path, "identity.md")
+
+
+class TestBoundedRead:
+    def test_stat_checked_before_read(self, tmp_path):
+        """Oversized files are rejected via stat, without a full read."""
+        f = tmp_path / "big.md"
+        f.write_bytes(b"a" * (MAX_FILE_BYTES + 100))
+        with patch("builtins.open", side_effect=AssertionError("must not read")):
+            with pytest.raises(IdentityFileError, match="exceeds"):
+                read_file_checked(f)
+
+    def test_post_read_recheck_catches_growth_race(self, tmp_path):
+        """If the file grows between stat and read, the bounded read's
+        re-check still rejects it."""
+        from types import SimpleNamespace
+        f = tmp_path / "race.md"
+        f.write_bytes(b"a" * (MAX_FILE_BYTES + 1))
+        with patch.object(
+            type(f), "stat", return_value=SimpleNamespace(st_size=10)
+        ):
+            with pytest.raises(IdentityFileError, match="exceeds"):
+                read_file_checked(f)
+
+    def test_unreadable_file_friendly_error(self, tmp_path):
+        f = tmp_path / "locked.md"
+        f.write_text("secret")
+        f.chmod(0)
+        try:
+            with pytest.raises(IdentityFileError, match="unreadable"):
+                read_file_checked(f)
+        finally:
+            f.chmod(0o644)
+
+
+class TestScaffoldContainment:
+    def test_symlinked_projects_dir_fails_safely(self, tmp_path):
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        root = tmp_path / "identity"
+        root.mkdir()
+        os.symlink(outside, root / "projects")
+        with pytest.raises(IdentityFileError, match="not a real directory"):
+            scaffold(root)
+        assert list(outside.iterdir()) == []  # nothing written outside
+
+    def test_symlinked_context_dir_fails_safely(self, tmp_path):
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        root = tmp_path / "identity"
+        root.mkdir()
+        os.symlink(outside, root / "context")
+        with pytest.raises(IdentityFileError, match="not a real directory"):
+            scaffold(root)
+        assert list(outside.iterdir()) == []
+
+    def test_symlinked_identity_md_refused(self, tmp_path):
+        target = tmp_path / "elsewhere.md"
+        target.write_text("original")
+        root = tmp_path / "identity"
+        root.mkdir()
+        os.symlink(target, root / "identity.md")
+        with pytest.raises(IdentityFileError, match="symlink"):
+            scaffold(root)
+        assert target.read_text() == "original"

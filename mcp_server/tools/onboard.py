@@ -67,31 +67,29 @@ async def onboard_agent(domain: str | None = None, client_name: str | None = Non
     missing: list[str] = []
     root = identity_service.identity_root()
 
-    # Identity: the user's trusted instructions (not reference data)
-    identity_path = root / "identity.md"
-    if identity_path.is_file():
-        try:
-            identity_text = _clip(
-                identity_service.read_file_checked(identity_path), IDENTITY_CHARS
-            )
-        except identity_service.IdentityFileError as exc:
-            identity_text = None
-            missing.append(f"identity.md unreadable: {exc}")
-    else:
+    # Identity: the user's trusted instructions. Read via the shared
+    # containment-checked primitive; budgeted as variable content (a
+    # multibyte identity must not break the total byte cap) while its
+    # heading and the fixed instructions stay intact.
+    try:
+        identity_text = _clip(
+            identity_service.safe_read(root, "identity.md"), IDENTITY_CHARS
+        )
+    except identity_service.IdentityFileMissing:
         identity_text = None
         missing.append(
             "no identity.md — the user should run `python manage.py "
             "init_identity` and fill it in"
         )
+    except identity_service.IdentityFileError as exc:
+        identity_text = None
+        missing.append(f"identity.md unreadable: {exc}")
 
+    # client_name is caller-controlled: sanitize and bound it
+    if client_name:
+        client_name = _sanitize(_clip(client_name, 60))
     header = "# Engram onboarding" + (f" — {client_name}" if client_name else "")
-    fixed_head = [header]
-    if identity_text:
-        fixed_head.append(
-            "## Who you are working with (the user's trusted instructions)\n"
-            + identity_text
-        )
-    fixed_head.append(CONVENTIONS)
+    fixed_head = [header, CONVENTIONS]
     fixed_head.append(
         "## Connection\n"
         f"- REST API: {settings.ENGRAM_PUBLIC_REST_URL}\n"
@@ -101,22 +99,25 @@ async def onboard_agent(domain: str | None = None, client_name: str | None = Non
     )
 
     variable: list[str] = []
+    if identity_text:
+        variable.append(
+            "## Who you are working with (the user's trusted instructions)\n"
+            + identity_text
+        )
     if domain:
         variable.append(f"## Project: {domain}\n{REFERENCE_CAUTION}")
-        project_path = root / "projects" / f"{domain}.md"
-        if project_path.is_file():
-            try:
-                variable.append(
-                    "### Canonical project context\n"
-                    + _sanitize(_clip(
-                        identity_service.read_file_checked(project_path),
-                        PROJECT_CHARS,
-                    ))
-                )
-            except identity_service.IdentityFileError as exc:
-                missing.append(f"projects/{domain}.md unreadable: {exc}")
-        else:
+        try:
+            variable.append(
+                "### Canonical project context\n"
+                + _sanitize(_clip(
+                    identity_service.safe_read(root, f"projects/{domain}.md"),
+                    PROJECT_CHARS,
+                ))
+            )
+        except identity_service.IdentityFileMissing:
             missing.append(f"no projects/{domain}.md file")
+        except identity_service.IdentityFileError as exc:
+            missing.append(f"projects/{domain}.md unreadable: {exc}")
 
         status = await memory_service.list_recent(
             limit=1, tags=[f"domain:{domain}", "type:project-status"]
@@ -156,7 +157,14 @@ async def onboard_agent(domain: str | None = None, client_name: str | None = Non
     if len(middle.encode("utf-8")) > budget:
         middle = middle.encode("utf-8")[: max(budget, 0)].decode("utf-8", "ignore")
 
-    parts = fixed_head + ([middle] if middle else []) + fixed_tail
+    # Identity/project sections read directly after the header; the fixed
+    # conventions, connection info, and next steps are never truncated.
+    parts = (
+        [fixed_head[0]]
+        + ([middle] if middle else [])
+        + fixed_head[1:]
+        + fixed_tail
+    )
     return "\n\n".join(parts)
 
 
