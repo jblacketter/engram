@@ -332,7 +332,7 @@ Decisions recorded 2026-07-11:
 ---
 
 ### Phase 11: Identity and Onboarding
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** Phase 10
 - **Description:** The AgentOS identity pillar — portable identity/context markdown files, canonical per-project status/context, and an `onboard_agent` MCP tool so any new agent is productive in minutes.
 - **Key Deliverables:**
