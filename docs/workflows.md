@@ -266,8 +266,11 @@ Updated: <YYYY-MM-DD> | Evidence: <checkpoint memory id(s) or "manual">
 
 Retrieval is deterministic, not semantic: latest snapshot via
 `GET /api/memories/?tags=domain:<d>,type:project-status&limit=1` (or the
-equivalent `list_recent_memories` call); recent non-status activity via
-`tags=domain:<d>&exclude_tags=type:project-status`.
+equivalent `list_recent_memories` call); recent **non-status, non-ingested**
+activity via `tags=domain:<d>&exclude_tags=type:project-status,ingested&limit=5`.
+Raw ingested document chunks are excluded from ambient recall for safety
+(prompt-injection risk) and noise; they remain available through explicit
+search.
 
 ## The daily loop
 

@@ -64,9 +64,13 @@ is used. Slugs are normalized to `[a-z0-9-]` (lowercased; other characters
    `exclude_tags` adds a `.exclude(tags__contains=[t])` per tag). Read-only,
    no schema change, unit-tested. The hook fetches **exactly**: latest
    status via `tags=domain:<d>,type:project-status&limit=1`, and recents
-   via `tags=domain:<d>&exclude_tags=type:project-status&limit=5` — the API
-   itself returns non-status records; no client-side filtering, no
-   completeness caveats. RRF search remains for relevance queries only.
+   via `tags=domain:<d>&exclude_tags=type:project-status,ingested&limit=5`
+   — the API itself returns non-status, non-ingested records; no
+   client-side filtering, no completeness caveats. *(As built: the
+   `ingested` exclusion was added during impl-review hardening — raw
+   ingested web/file chunks are the highest prompt-injection risk in
+   ambient injection and stay reachable via explicit search.)* RRF search
+   remains for relevance queries only.
 
 2. **`list_domains` MCP tool (small backend addition).** Returns the
    distinct `domain:*` tags with memory counts (derived the same way as the
@@ -81,7 +85,8 @@ is used. Slugs are normalized to `[a-z0-9-]` (lowercased; other characters
    - Runs on `startup` and `clear` sources; exits silently on `compact`
      (context already present) and on `resume` (avoid duplicate injection).
    - Fetches via the new list filters: latest `type:project-status` (limit
-     1) + latest 5 non-status memories for the domain; prints a compact
+     1) + latest 5 non-status, non-ingested memories for the domain
+     (ambient recall never injects raw ingested chunks); prints a compact
      context block (≤4 KB, truncating memory bodies) to stdout.
    - Fail-soft everywhere: malformed/missing stdin, missing cwd, HTTP or
      auth errors, invalid JSON responses, timeouts, empty results → print
