@@ -361,7 +361,7 @@ Decisions recorded 2026-07-11:
 ---
 
 ### Phase 13: Automations and Polish
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** Phase 12
 - **Description:** Windows/WSL2 LAN deployment (the intended personal hosting target), scheduled maintenance, and remaining cleanups.
 - **Key Deliverables:**
