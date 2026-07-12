@@ -21,7 +21,7 @@ class TestStoreFromUrl:
             ]
             from mcp_server.tools.ingest import store_from_url
 
-            result = await store_from_url("https://example.com", tags=["test"])
+            result = await store_from_url.fn("https://example.com", tags=["test"])
 
         data = json.loads(result)
         assert data["status"] == "ok"
@@ -40,7 +40,7 @@ class TestStoreFromUrl:
             mock_scrape.side_effect = SSRFError("Loopback blocked")
             from mcp_server.tools.ingest import store_from_url
 
-            result = await store_from_url("http://localhost/admin")
+            result = await store_from_url.fn("http://localhost/admin")
 
         assert "SSRF validation failed" in result
 
@@ -52,7 +52,7 @@ class TestStoreFromUrl:
             mock_scrape.side_effect = RuntimeError("Connection failed")
             from mcp_server.tools.ingest import store_from_url
 
-            result = await store_from_url("https://failing.example.com")
+            result = await store_from_url.fn("https://failing.example.com")
 
         assert "Error ingesting URL" in result
 
@@ -73,7 +73,7 @@ class TestIngestFileMcp:
             ]
             from mcp_server.tools.ingest import ingest_file
 
-            result = await ingest_file(
+            result = await ingest_file.fn(
                 content_base64=content_b64,
                 filename="test.txt",
                 tags=["unit-test"],
@@ -91,7 +91,7 @@ class TestIngestFileMcp:
     async def test_returns_error_on_invalid_base64(self):
         from mcp_server.tools.ingest import ingest_file
 
-        result = await ingest_file(
+        result = await ingest_file.fn(
             content_base64="!!!not-valid-base64!!!",
             filename="test.txt",
         )
@@ -107,7 +107,7 @@ class TestIngestFileMcp:
             mock_ingest.side_effect = ValueError("Unsupported file type")
             from mcp_server.tools.ingest import ingest_file
 
-            result = await ingest_file(
+            result = await ingest_file.fn(
                 content_base64=content_b64,
                 filename="file.exe",
             )

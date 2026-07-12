@@ -431,7 +431,11 @@ class TestGetStats:
             MockMemory.objects.count = MagicMock(return_value=0)
 
             with patch("mcp_server.tools.stats.sync_to_async") as mock_s2a:
-                mock_s2a.side_effect = lambda fn: AsyncMock(return_value=fn())
+                # Forward call-time args to fn: sync_to_async(list)(qs) must
+                # evaluate list(qs), not list()
+                mock_s2a.side_effect = lambda fn: AsyncMock(
+                    side_effect=lambda *args, **kwargs: fn(*args, **kwargs)
+                )
 
                 from mcp_server.tools.stats import get_stats
                 result = await get_stats.fn()
@@ -459,7 +463,11 @@ class TestGetStats:
                 ["python"],
             ]
 
-            mock_s2a.side_effect = lambda fn: AsyncMock(return_value=fn())
+            # Forward call-time args to fn: sync_to_async(list)(qs) must
+            # evaluate list(qs), not list()
+            mock_s2a.side_effect = lambda fn: AsyncMock(
+                side_effect=lambda *args, **kwargs: fn(*args, **kwargs)
+            )
 
             from mcp_server.tools.stats import get_stats
             result = await get_stats.fn()

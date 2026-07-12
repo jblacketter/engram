@@ -105,7 +105,7 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
     Returns (frontmatter_dict, body_text). Simple regex-based parser
     for flat key-value pairs — no PyYAML dependency.
     """
-    match = re.match(r"^---\s*\n(.*?)\n---\s*\n?", text, re.DOTALL)
+    match = re.match(r"^---\s*\n(.*?)\n?---\s*\n?", text, re.DOTALL)
     if not match:
         return {}, text
 
@@ -131,6 +131,10 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
             # Handle bare value
             elif value:
                 frontmatter[key] = value.strip("\"'")
+            # Empty value: record the key so a following "- item" block
+            # list attaches to it
+            else:
+                frontmatter[key] = ""
 
         # Handle YAML list items: - item
         elif line.startswith("- ") and frontmatter:

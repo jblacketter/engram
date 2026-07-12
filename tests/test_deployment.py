@@ -219,7 +219,7 @@ class TestProductionSettings:
     def test_has_secure_proxy_ssl_header(self):
         content = (BASE / "engram" / "settings" / "production.py").read_text()
         assert "SECURE_PROXY_SSL_HEADER" in content
-        assert "X-Forwarded-Proto" in content
+        assert "HTTP_X_FORWARDED_PROTO" in content
 
     def test_has_conn_max_age(self):
         content = (BASE / "engram" / "settings" / "production.py").read_text()

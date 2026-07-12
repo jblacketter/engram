@@ -5,37 +5,19 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from django.contrib.auth.models import User
 from django.test import override_settings
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.test import APIClient
+from rest_framework.views import APIView
 
 from core.models import Memory
 
-# DRF settings for secured mode (REST_API_KEY is set)
-SECURED_DRF_SETTINGS = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "api.authentication.APIKeyAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
-    ],
-    "DEFAULT_THROTTLE_CLASSES": [],
-    "DEFAULT_THROTTLE_RATES": {"read": "100/min", "write": "30/min"},
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-}
+# NOTE: DRF resolves DEFAULT_PERMISSION_CLASSES once at import time (base.py
+# picks IsAuthenticated vs AllowAny from REST_API_KEY), so override_settings
+# on REST_FRAMEWORK cannot change view permissions afterwards. These tests
+# patch APIView.permission_classes directly instead, and use override_settings
+# only for REST_API_KEY, which APIKeyAuthentication reads at request time.
 
-# DRF settings for dev mode (REST_API_KEY is empty)
-DEV_DRF_SETTINGS = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "api.authentication.APIKeyAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
-    ],
-    "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.AllowAny",
-    ],
-    "DEFAULT_THROTTLE_CLASSES": [],
-    "DEFAULT_THROTTLE_RATES": {"read": "100/min", "write": "30/min"},
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-}
+TEST_API_KEY = "test-secret-key-123"
 
 
 def _make_memory(**overrides):
@@ -59,15 +41,19 @@ def _make_memory(**overrides):
     return mem
 
 
-TEST_API_KEY = "test-secret-key-123"
-
-
 # ---------------------------------------------------------------------------
 # Secured mode
 # ---------------------------------------------------------------------------
 
-@override_settings(REST_FRAMEWORK=SECURED_DRF_SETTINGS, REST_API_KEY=TEST_API_KEY)
 class TestSecuredMode:
+    @pytest.fixture(autouse=True)
+    def _secured_mode(self):
+        with (
+            patch.object(APIView, "permission_classes", [IsAuthenticated]),
+            override_settings(REST_API_KEY=TEST_API_KEY),
+        ):
+            yield
+
     def test_valid_api_key_returns_200(self):
         client = APIClient()
         client.credentials(HTTP_AUTHORIZATION=f"Bearer {TEST_API_KEY}")
@@ -109,8 +95,15 @@ class TestSecuredMode:
 # Dev mode
 # ---------------------------------------------------------------------------
 
-@override_settings(REST_FRAMEWORK=DEV_DRF_SETTINGS, REST_API_KEY="")
 class TestDevMode:
+    @pytest.fixture(autouse=True)
+    def _dev_mode(self):
+        with (
+            patch.object(APIView, "permission_classes", [AllowAny]),
+            override_settings(REST_API_KEY=""),
+        ):
+            yield
+
     def test_no_header_returns_200(self):
         client = APIClient()
         mem = _make_memory()
@@ -125,8 +118,15 @@ class TestDevMode:
 # Session auth (secured mode)
 # ---------------------------------------------------------------------------
 
-@override_settings(REST_FRAMEWORK=SECURED_DRF_SETTINGS, REST_API_KEY=TEST_API_KEY)
 class TestSessionAuth:
+    @pytest.fixture(autouse=True)
+    def _secured_mode(self):
+        with (
+            patch.object(APIView, "permission_classes", [IsAuthenticated]),
+            override_settings(REST_API_KEY=TEST_API_KEY),
+        ):
+            yield
+
     @pytest.mark.django_db
     def test_session_auth_works_in_secured_mode(self):
         User.objects.create_user(username="testuser", password="testpass")

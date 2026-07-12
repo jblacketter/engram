@@ -70,11 +70,13 @@ def _check_ip(ip: ipaddress.IPv4Address | ipaddress.IPv6Address, hostname: str) 
     if ip.is_loopback:
         raise SSRFError(f"Loopback address blocked: {hostname} -> {ip}")
 
-    if ip.is_private:
-        raise SSRFError(f"Private address blocked: {hostname} -> {ip}")
-
+    # Link-local before private: Python 3.12.4+ counts link-local ranges as
+    # private, which would mask the more specific error
     if ip.is_link_local:
         raise SSRFError(f"Link-local address blocked: {hostname} -> {ip}")
+
+    if ip.is_private:
+        raise SSRFError(f"Private address blocked: {hostname} -> {ip}")
 
     # Explicit cloud metadata check (covers 169.254.169.254)
     if isinstance(ip, ipaddress.IPv4Address):
