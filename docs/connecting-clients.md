@@ -10,7 +10,7 @@ See [Docker Setup](setup-docker.md#step-3-connect-claude-desktop) or [Supabase S
 
 ```bash
 # Add via CLI
-claude mcp add engram http://localhost:8080/mcp
+claude mcp add --transport http engram http://localhost:8080/mcp
 ```
 
 Or add to `.claude/settings.json` in your project:

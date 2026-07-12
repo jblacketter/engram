@@ -67,14 +67,15 @@ Engram is a personal knowledge base that stores your notes, conversations, docum
 
 **Prerequisites:** Python 3.12+, PostgreSQL 16 with pgvector, Ollama (or Docker)
 
-```bash
-# Install from PyPI
-pip install engram-semantic
+The supported install path is **source + Docker**:
 
-# Or clone for development
+```bash
+# 1. Clone the repository
 git clone https://github.com/jblacketter/engram.git && cd engram
 
 # 2. Start database + Ollama via Docker
+#    (omit the ollama service if Ollama already runs natively on :11434:
+#     docker compose up -d db)
 docker compose up -d
 
 # 3. Pull the embedding model
@@ -83,13 +84,19 @@ ollama pull nomic-embed-text
 # 4. Install Python dependencies
 pip install -e ".[dev]"
 
-# 5. Copy environment config
+# 5. Copy environment config (set DJANGO_SECRET_KEY)
 cp .env.example .env
 
 # 6. Run migrations and start the server
 python manage.py migrate
 python manage.py runserver
 ```
+
+> **Note on PyPI:** the [`engram-semantic`](https://pypi.org/project/engram-semantic/)
+> wheel ships the Python packages only — it does not include `manage.py`, the
+> React dashboard, or a console entry point, so it cannot run the full stack
+> on its own. Use it when you need engram's modules as a library; install
+> from source for everything else.
 
 The API is now live at `http://localhost:8000/api/` and docs at `http://localhost:8000/api/docs/`.
 
@@ -126,7 +133,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 ### Claude Code
 
 ```bash
-claude mcp add engram http://localhost:8080/mcp
+claude mcp add --transport http engram http://localhost:8080/mcp
 ```
 
 ### Cursor / Windsurf

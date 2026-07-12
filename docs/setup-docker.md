@@ -24,8 +24,14 @@ For **production**, update these values in `.env`:
 DJANGO_SECRET_KEY=<generate-a-random-string>
 DJANGO_SETTINGS_MODULE=engram.settings.production
 DJANGO_ALLOWED_HOSTS=<server-ip>,localhost
+CORS_ALLOWED_ORIGINS=https://<server-ip>
 POSTGRES_PASSWORD=<strong-random-password>
 ```
+
+> **Preflight:** `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, and
+> `CORS_ALLOWED_ORIGINS` are **required** — the production settings read them
+> from the environment with no defaults, and the compose files do not set
+> them, so Django will fail to boot if any are missing from `.env`.
 
 ## Step 2: Launch with Docker Compose
 

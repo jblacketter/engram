@@ -134,7 +134,7 @@ Phase 8: Production Deployment
 ## Phases
 
 ### Phase 1: Foundation `[Medium]`
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** None
 - **Description:** Django project scaffolding with split settings, Docker infrastructure, and the core Memory model.
 - **Key Deliverables:**
@@ -151,7 +151,7 @@ Phase 8: Production Deployment
 ---
 
 ### Phase 2: Core Memory Engine `[Large]`
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** Phase 1
 - **Description:** Embedding provider abstraction, memory CRUD service layer, and hybrid search combining pgvector cosine similarity with PostgreSQL BM25 via Reciprocal Rank Fusion.
 - **Key Deliverables:**
@@ -167,7 +167,7 @@ Phase 8: Production Deployment
 ---
 
 ### Phase 3: MCP Server `[Medium]`
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** Phase 2
 - **Description:** FastMCP server exposing the memory system to AI clients over Streamable HTTP.
 - **Key Deliverables:**
@@ -181,7 +181,7 @@ Phase 8: Production Deployment
 ---
 
 ### Phase 4: REST API `[Medium]`
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** Phase 2
 - **Description:** Django REST Framework API mirroring MCP tools, with auth, docs, and rate limiting.
 - **Key Deliverables:**
@@ -208,7 +208,7 @@ Phase 8: Production Deployment
 ---
 
 ### Phase 5: React Dashboard `[Large]`
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** Phase 4
 - **Description:** Full-featured React dashboard for browsing, searching, and visualizing memories.
 - **Key Deliverables:**
@@ -224,7 +224,7 @@ Phase 8: Production Deployment
 ---
 
 ### Phase 6: Intelligence Layer `[Medium]`
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** Phase 2 (can run parallel with Phases 3-5)
 - **Description:** Automatic enrichment of memories with tags, entities, and decay scoring.
 - **Key Deliverables:**
@@ -239,7 +239,7 @@ Phase 8: Production Deployment
 ---
 
 ### Phase 7: Ingestion & Integration `[Medium]`
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** Phase 2, Phase 6
 - **Description:** Batch import from files, URLs, and Obsidian vaults.
 - **Key Deliverables:**
@@ -255,7 +255,7 @@ Phase 8: Production Deployment
 ---
 
 ### Phase 8: Production Deployment `[Large]`
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** All previous phases (3, 5, 7)
 - **Description:** Production-ready deployment to Windows/WSL machine with GPU on LAN.
 - **Key Deliverables:**
@@ -268,6 +268,109 @@ Phase 8: Production Deployment
   - LAN security: API keys, rate limiting, no exposed internal ports
 - **Key Files:** `docker-compose.prod.yml`, `Dockerfile`, `nginx/nginx.conf`, `scripts/`, `openbrain/settings/production.py`
 - **Verify:** `docker compose -f docker-compose.prod.yml up -d` on WSL → access from LAN → GPU embeddings → backup/restore cycle
+
+---
+
+## Revival Roadmap (v1.1 — Shared Brain)
+
+Phases 1–8 shipped as v1.0.0. The phases below revive the project and turn it
+into the memory pillar of a personal agent OS (see `SHARED_BRAIN_REVIVAL.md`
+for background and the AgentOS comparison).
+
+**Core product direction:** the user's central pain is tracking many
+concurrent projects, research, and learning. Engram therefore carries
+canonical per-project status/context — not just episodic memories — with a
+safe proposed-update workflow: sessions *propose* status updates, the user
+confirms, engram records. Tagteam remains the handoff/review engine; engram
+stores and surfaces project continuity (e.g. approved cycle summaries feed
+proposed status updates). The two systems integrate at that boundary and are
+not merged.
+
+Decisions recorded 2026-07-11:
+
+- **Deploy target:** Mac for development and verification now; Windows/WSL2
+  LAN hosting is the intended personal deployment (explicit deliverable in
+  `automations-and-polish`, after the daily workflow is proven).
+- **Scoping/auth:** per-agent API keys + soft domain tags for authorization.
+  Whether soft tags remain the long-term *project* model is deliberately
+  left open — `agent-scoping` includes a decision checkpoint on first-class
+  projects/workspaces, informed by daily-driver experience.
+- **PyPI:** deprioritized; source/Docker is the supported install path.
+- **Usage model:** ambient recall via Claude Code hooks; capture is
+  suggestion-first during development (session proposes, user confirms),
+  with fully automatic capture as the trusted end-state.
+
+### Phase 9: Revive and Verify
+- **Status:** Not Started
+- **Dependencies:** None
+- **Description:** Bring the stack back up on the Mac, re-establish the test baseline, and verify the full store→search→recall loop live from Claude Code over MCP.
+- **Key Deliverables:**
+  - Dev stack running locally (Postgres+pgvector container, native Mac Ollama with `nomic-embed-text`)
+  - Full backend test suite green, including the known-broken `TestGetStats::test_get_stats_with_data`
+  - Live MCP round-trip from Claude Code: store_memory → search_brain → find_related
+  - README install docs corrected: source/Docker is the supported path; PyPI caveats documented
+  - Prod-compose env requirements documented (`DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`)
+- **Key Files:** `docker-compose.yml`, `README.md`, `.env.example`, `tests/`
+- **Verify:** `pytest` all green → live MCP round-trip from a real Claude Code session
+
+---
+
+### Phase 10: Daily Driver
+- **Status:** Not Started
+- **Dependencies:** Phase 9
+- **Description:** Ambient recall and suggestion-first capture from Claude Code — engram becomes part of every session without getting in the way.
+- **Key Deliverables:**
+  - SessionStart hook: query engram for memories and project status relevant to the current project, inject as context
+  - Session-end capture, **suggestion-first**: propose a checkpoint/summary (decisions, learnings, project-status delta) for user confirmation before writing, tagged `domain:<project>`; fully automatic writes are an end-state capability once trust is established
+  - Project status/context tracking (v1): proposed-update workflow against canonical per-project status; user confirms before engram records
+  - MCP prompts for the recurring workflows: start-day, switch-project, end-session, weekly-review
+  - Per-project domain conventions documented
+  - A skill for explicit store/search on top of the ambient layer
+- **Key Files:** new hooks/skill/prompt assets, `docs/workflows.md`
+- **Verify:** one week of real daily use across at least two projects; recall surfaces relevant prior context; at least one confirmed project-status update flows through the propose→confirm→record path
+
+---
+
+### Phase 11: Identity and Onboarding
+- **Status:** Not Started
+- **Dependencies:** Phase 10
+- **Description:** The AgentOS identity pillar — portable identity/context markdown files, canonical per-project status/context, and an `onboard_agent` MCP tool so any new agent is productive in minutes.
+- **Key Deliverables:**
+  - `identity.md` + `context/*.md` structure (git as source of truth)
+  - Canonical per-project status/context files, exposed as **read-only MCP resources** (alongside identity), so any client can load them without a tool call
+  - Identity/project file ingestion into engram (tagged for retrieval)
+  - `onboard_agent` MCP tool: who the user is, house rules, domain assignment, connection info
+  - Tagteam integration boundary: ingest approved cycle summaries into engram; use them as evidence when proposing project-status updates (tagteam stays the handoff/review engine — no merging of the systems)
+- **Key Files:** `mcp_server/tools/`, MCP resource definitions, identity/project file structure, `ingestion/`
+- **Verify:** fresh agent session calls `onboard_agent`, reads identity/project resources, and can immediately store/search correctly scoped memories; an approved tagteam cycle summary appears in engram and informs a proposed status update
+
+---
+
+### Phase 12: Agent Scoping
+- **Status:** Not Started
+- **Dependencies:** Phase 11
+- **Description:** Per-agent API keys with domain binding; close the unscoped read surfaces. Opens with a decision checkpoint on the long-term project model.
+- **Key Deliverables:**
+  - **Decision checkpoint (first deliverable):** evaluate — with daily-driver usage data — whether soft `domain:` tags suffice as the long-term project model or a first-class project/workspace column is warranted. Per-agent authorization and project organization solve different problems; decide and log before implementing. The auth work below proceeds either way.
+  - API-key table: key hash, agent name, default domain, allowed domains
+  - Server-side domain tag injection on write; domain filtering on the currently-unscoped reads (`GET /api/memories/`, `/stats/`, `/tags/`, MCP `get_memory`/`get_stats`)
+  - Key management commands (create/revoke/list)
+- **Key Files:** `api/authentication.py`, `mcp_server/auth.py`, `core/`, new migration, `docs/decision_log.md`
+- **Verify:** two keys with different domains cannot see each other's memories on any surface; project-model decision recorded in the decision log
+
+---
+
+### Phase 13: Automations and Polish
+- **Status:** Not Started
+- **Dependencies:** Phase 12
+- **Description:** Windows/WSL2 LAN deployment (the intended personal hosting target), scheduled maintenance, and remaining cleanups.
+- **Key Deliverables:**
+  - **Windows/WSL2 LAN deployment** of the prod compose stack with GPU-accelerated Ollama — the personal deployment target, now that the daily workflow is proven
+  - Scheduled decay runs and weekly digest report
+  - Embedding registry made config-driven (currently hardcodes Ollama)
+  - Docker image pinning (`ollama/ollama`, `nginx`)
+- **Key Files:** `docker-compose.prod.yml`, `docs/deploy-windows-lan.md`, `intelligence/`, `embeddings/registry.py`
+- **Verify:** stack running on the Windows/WSL2 box, reachable and used from the Mac over LAN with GPU embeddings; decay + digest run unattended; stack reproducible from pinned images
 
 ---
 

@@ -6,6 +6,50 @@ This log tracks important decisions made during the project.
 
 ---
 
+## 2026-07-11: Deploy target — Mac now, Windows/WSL2 LAN as the intended personal deployment
+
+**Decision:** Develop and verify on the Mac (native Ollama + Docker Postgres). Windows/WSL2 LAN hosting with GPU is the intended personal deployment, scheduled in the `automations-and-polish` phase after the daily workflow is proven.
+
+**Context:** Revival of the project (see `SHARED_BRAIN_REVIVAL.md`). The Windows GPU box runs Ollama; the Mac is where daily development happens.
+
+**Decided By:** Human (Jack), 2026-07-11; reframed per reviewer feedback to make WSL2 an explicit deliverable rather than optional.
+
+**Phase:** Revival Roadmap (Phases 9, 13)
+
+---
+
+## 2026-07-11: Scoping — per-agent API keys + soft domain tags; project model left open
+
+**Decision:** Add per-agent API keys with bound default domains (Phase 12 `agent-scoping`) on top of the existing soft `domain:<name>` tag convention. Whether soft tags remain the long-term *project* model is deliberately open: Phase 12 begins with a decision checkpoint on first-class projects/workspaces, informed by daily-driver usage.
+
+**Alternatives Considered:** keep soft scoping only (leaves unscoped surfaces open); hard workspace column now (most migration work, likely overkill single-user); full agent-gate integration (heaviest; may dogfood later).
+
+**Decided By:** Human (Jack) for the auth approach; project-model checkpoint added per reviewer (codex) feedback.
+
+**Phase:** Revival Roadmap (Phase 12)
+
+---
+
+## 2026-07-11: PyPI deprioritized — source/Docker is the supported install path
+
+**Decision:** Do not invest in fixing the `engram-semantic` wheel (no `manage.py`, no console script, no frontend). Document source+Docker as the supported path; the wheel remains useful as a library only. Revisit if the project goes public-facing.
+
+**Decided By:** Human (Jack), 2026-07-11.
+
+**Phase:** Revival Roadmap (Phase 9 doc corrections)
+
+---
+
+## 2026-07-11: Daily usage model — ambient recall, suggestion-first capture
+
+**Decision:** Engram integrates into daily Claude Code work via hooks: automatic recall at session start; session-end capture proposes a checkpoint/status update for confirmation before writing (automatic writes become an end-state capability once trust is established). Canonical identity/project context is exposed as read-only MCP resources; recurring workflows (start-day, switch-project, end-session, weekly-review) as MCP prompts; tools remain for search and writes. Core direction: per-project status/context tracking with a propose→confirm→record workflow; tagteam stays the handoff/review engine and feeds approved cycle summaries into engram at a defined boundary.
+
+**Decided By:** Human (Jack) chose ambient hooks; suggestion-first staging, MCP resources/prompts, and the project-status direction added per reviewer (codex) feedback.
+
+**Phase:** Revival Roadmap (Phases 10, 11)
+
+---
+
 ## 2026-03-03: Use Django + DRF instead of FastAPI
 
 **Decision:** Use Django with Django REST Framework as the backend instead of FastAPI/Streamlit.
