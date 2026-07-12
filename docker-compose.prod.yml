@@ -1,6 +1,6 @@
 services:
   nginx:
-    image: nginx:alpine
+    image: nginx:1.29.4-alpine
     ports:
       - "443:443"
       - "80:80"
@@ -26,8 +26,10 @@ services:
       DJANGO_SETTINGS_MODULE: engram.settings.production
       POSTGRES_HOST: db
       OLLAMA_BASE_URL: http://ollama:11434
+      ENGRAM_IDENTITY_DIR: /identity
     volumes:
       - staticfiles:/app/staticfiles
+      - ${ENGRAM_IDENTITY_HOST_DIR:-~/.engram/identity}:/identity:ro
     depends_on:
       db:
         condition: service_healthy
@@ -49,20 +51,51 @@ services:
       DJANGO_SETTINGS_MODULE: engram.settings.production
       POSTGRES_HOST: db
       OLLAMA_BASE_URL: http://ollama:11434
+      ENGRAM_IDENTITY_DIR: /identity
+    volumes:
+      - ${ENGRAM_IDENTITY_HOST_DIR:-~/.engram/identity}:/identity:ro
     depends_on:
       db:
         condition: service_healthy
     expose:
       - "8080"
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8080/mcp')\""]
+      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('localhost', 8080), 3)\""]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
 
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    profiles: ["scheduler"]
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: engram.settings.production
+      POSTGRES_HOST: db
+      OLLAMA_BASE_URL: http://ollama:11434
+      ENGRAM_IDENTITY_DIR: /identity
+    volumes:
+      - ${ENGRAM_IDENTITY_HOST_DIR:-~/.engram/identity}:/identity:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        while true; do
+          if [ "$$(date +%u)" = "1" ]; then
+            python manage.py maintenance --digest || echo "maintenance failed"
+          else
+            python manage.py maintenance || echo "maintenance failed"
+          fi
+          sleep 86400
+        done
+
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:0.8.5-pg16
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-engram}
       POSTGRES_USER: ${POSTGRES_USER:-engram}
@@ -79,7 +112,7 @@ services:
       - "5432"
 
   ollama:
-    image: ollama/ollama
+    image: ollama/ollama:0.31.2
     volumes:
       - ollama_models:/root/.ollama
     deploy:

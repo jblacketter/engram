@@ -1,0 +1,22 @@
+{
+  "state": "in-progress",
+  "ready_for": "reviewer",
+  "round": 2,
+  "phase": "agent-scoping",
+  "type": "impl",
+  "lead": "claude",
+  "reviewer": "codex",
+  "date": "2026-07-12",
+  "baseline": {
+    "sha": "65b629ba5a5e8c6bbc3931b79cebcf1462c44a06",
+    "dirty_paths": [
+      "?? .tagteam/",
+      "?? docs/handoffs/identity-and-onboarding_impl_rounds.jsonl",
+      "?? docs/handoffs/identity-and-onboarding_impl_status.json",
+      "?? docs/phases/agent-scoping.md",
+      "?? handoff-state.json"
+    ],
+    "captured_at": "2026-07-12T07:28:25.476484+00:00",
+    "source": "copied-from-plan"
+  }
+}

@@ -162,3 +162,38 @@ git pull
 docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml exec django python manage.py migrate
 ```
+
+## Deployment checklist (revival roadmap)
+
+Prepared in the `automations-and-polish` phase; execute top-to-bottom on
+the Windows/WSL2 box. Everything below is copy-paste; record the run in
+`docs/adoption-log.md` when done.
+
+1. **Preflight `.env`** (Django fails to boot without the first two):
+   `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS=<box-ip>,localhost`,
+   `CORS_ALLOWED_ORIGINS=https://<box-ip>`, `POSTGRES_PASSWORD`,
+   `DJANGO_SETTINGS_MODULE=engram.settings.production`.
+2. **Identity repo:** clone your identity repo to the box (default
+   `~/.engram/identity`, override with `ENGRAM_IDENTITY_HOST_DIR` in
+   `.env`). The compose stack mounts it read-only at `/identity`.
+3. **Bring up the stack** (images are pinned; GPU reservation is in the
+   ollama service):
+   `docker compose -f docker-compose.prod.yml up -d`
+   (add `--profile scheduler` for scheduled decay/digest).
+4. **Pull the embedding model:**
+   `docker compose -f docker-compose.prod.yml exec ollama ollama pull nomic-embed-text`
+5. **Migrate:**
+   `docker compose -f docker-compose.prod.yml exec django python manage.py migrate`
+6. **Agent keys** — one per connecting tool (the MCP server picks up its
+   first key at startup; restart `mcp` after creating the first one):
+   `docker compose -f docker-compose.prod.yml exec django python manage.py agent_keys create claude-code-mac --default-domain <your-main-domain>`
+7. **Connect from the Mac over LAN:**
+   `claude mcp add --transport http --scope user engram https://<box-ip>/mcp/ --header "Authorization: Bearer egk_..."`
+   and set `ENGRAM_API_URL=https://<box-ip>/api` +
+   `ENGRAM_REST_API_KEY` for the recall hook.
+8. **Verify (roadmap Phase 13 line):** store → scoped search from the Mac;
+   GPU embeddings (`docker compose exec ollama nvidia-smi`); hook injects
+   context in a Mac session pointed at the box; decay+digest have run
+   (check for a `type:digest` memory after the first scheduled Monday, or
+   run `maintenance --digest` once by hand); backup/restore cycle
+   (`scripts/backup.sh` / `restore.sh`).

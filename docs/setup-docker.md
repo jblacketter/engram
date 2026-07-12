@@ -181,3 +181,9 @@ services:
 `init_identity` (and any editing) remains a deliberate host action — the
 services only read. Wiring this into `docker-compose.prod.yml` is a
 Phase 13 roadmap deliverable.
+
+## Image pins
+
+Images are pinned for reproducibility (verified on Docker Hub 2026-07-12):
+`pgvector/pgvector:0.8.5-pg16`, `ollama/ollama:0.31.2`,
+`nginx:1.29.4-alpine`. Bump deliberately; keep dev and prod in sync.

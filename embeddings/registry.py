@@ -2,6 +2,7 @@ import logging
 
 import httpx
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 
 from embeddings.base import EmbeddingProvider
 from embeddings.ollama_provider import OllamaProvider
@@ -11,7 +12,15 @@ logger = logging.getLogger(__name__)
 
 
 def get_provider() -> EmbeddingProvider:
-    return OllamaProvider()
+    """Primary provider, selected by settings.EMBEDDING_PROVIDER."""
+    name = getattr(settings, "EMBEDDING_PROVIDER", "ollama")
+    if name == "ollama":
+        return OllamaProvider()
+    if name == "openrouter":
+        return OpenRouterProvider()
+    raise ImproperlyConfigured(
+        f"Unknown EMBEDDING_PROVIDER {name!r} (expected 'ollama' or 'openrouter')"
+    )
 
 
 def get_fallback_provider() -> EmbeddingProvider | None:

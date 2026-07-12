@@ -247,6 +247,16 @@ async def sync(
     }
     allow_cloud = bool(getattr(settings, "ENGRAM_IDENTITY_CLOUD_EMBED", False))
 
+    # With a cloud PRIMARY provider, disabling the fallback is not enough —
+    # refuse outright rather than silently upload identity content.
+    provider = getattr(settings, "EMBEDDING_PROVIDER", "ollama")
+    if provider != "ollama" and not allow_cloud:
+        report["errors"].append(
+            f"identity sync refused: EMBEDDING_PROVIDER={provider!r} is a "
+            "cloud provider and ENGRAM_IDENTITY_CLOUD_EMBED is not enabled"
+        )
+        return report
+
     files, rejected = scan_files(root)
     report["rejected"].extend(rejected)
 

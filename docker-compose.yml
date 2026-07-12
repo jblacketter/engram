@@ -1,6 +1,6 @@
 services:
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:0.8.5-pg16
     environment:
       POSTGRES_DB: engram
       POSTGRES_USER: engram
@@ -17,7 +17,7 @@ services:
       retries: 5
 
   ollama:
-    image: ollama/ollama
+    image: ollama/ollama:0.31.2
     ports:
       - "11434:11434"
     volumes:

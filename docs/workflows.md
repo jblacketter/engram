@@ -360,3 +360,36 @@ stats, tags, get_memory, get_stats, list_domains) are filtered to the
 key's allowed domains with 404-not-403 for invisible ids. The owner
 surface (global key, dashboard) keeps full visibility. See the README
 "Scoping memories across domains" section for the full contract.
+
+## Automations
+
+Scheduled upkeep runs through one command:
+
+```bash
+python manage.py maintenance            # decay recompute
+python manage.py maintenance --digest   # decay + weekly digest (stored as
+                                        # a type:digest memory, owner-only,
+                                        # embedded locally)
+```
+
+**Host scheduling (recommended).** Crontab (WSL/Linux):
+
+```cron
+15 3 * * *  cd /path/to/engram && .venv/bin/python manage.py maintenance
+30 3 * * 1  cd /path/to/engram && .venv/bin/python manage.py maintenance --digest
+```
+
+macOS launchd: create `~/Library/LaunchAgents/ai.engram.maintenance.plist`
+with a `ProgramArguments` of the same command and a `StartCalendarInterval`
+(daily 03:15), then `launchctl load` it.
+
+**Compose scheduling (optional).** The prod stack ships a `scheduler`
+service behind a profile — daily decay, digest on Mondays:
+
+```bash
+docker compose -f docker-compose.prod.yml --profile scheduler up -d
+```
+
+The command exits non-zero on failure so cron/launchd/compose logs surface
+problems. Identity sync is deliberately NOT scheduled — the identity repo
+is human-edited; syncing stays a deliberate action.
