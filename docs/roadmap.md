@@ -347,7 +347,7 @@ Decisions recorded 2026-07-11:
 ---
 
 ### Phase 12: Agent Scoping
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** Phase 11
 - **Description:** Per-agent API keys with domain binding; close the unscoped read surfaces. Opens with a decision checkpoint on the long-term project model.
 - **Key Deliverables:**
