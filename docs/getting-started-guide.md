@@ -139,10 +139,10 @@ curl http://localhost:8000/api/stats/
 ```bash
 # Add for a specific project (recommended for scoping)
 cd ~/projects/some-project
-claude mcp add engram http://localhost:8080/mcp --scope project
+claude mcp add --transport http engram http://localhost:8080/mcp --scope project
 
 # OR add globally for all projects
-claude mcp add engram http://localhost:8080/mcp --scope user
+claude mcp add --transport http engram http://localhost:8080/mcp --scope user
 ```
 
 After adding, restart Claude Code. You can then ask Claude things like:
@@ -284,7 +284,7 @@ On your Mac (and any other machine), point to the server. In production, nginx p
 
 ```bash
 # Claude Code
-claude mcp add engram https://<server-ip>/mcp/ --scope user
+claude mcp add --transport http engram https://<server-ip>/mcp/ --scope user
 ```
 
 For Claude Desktop, update the config to:

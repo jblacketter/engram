@@ -28,10 +28,12 @@ CORS_ALLOWED_ORIGINS=https://<server-ip>
 POSTGRES_PASSWORD=<strong-random-password>
 ```
 
-> **Preflight:** `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`, and
-> `CORS_ALLOWED_ORIGINS` are **required** — the production settings read them
-> from the environment with no defaults, and the compose files do not set
-> them, so Django will fail to boot if any are missing from `.env`.
+> **Preflight:** `DJANGO_SECRET_KEY` and `DJANGO_ALLOWED_HOSTS` are
+> **required** — the settings read them from the environment with no
+> defaults, and the compose files do not set them, so Django will fail to
+> boot if either is missing from `.env`. `CORS_ALLOWED_ORIGINS` has an empty
+> default and won't block boot, but set it for the intended browser/LAN
+> configuration or the dashboard's API calls will be blocked by CORS.
 
 ## Step 2: Launch with Docker Compose
 
@@ -128,12 +130,12 @@ Restart Claude Desktop. You should see the Engram tools available in the MCP too
 
 **Development:**
 ```bash
-claude mcp add engram http://localhost:8080/mcp
+claude mcp add --transport http engram http://localhost:8080/mcp
 ```
 
 **Production:**
 ```bash
-claude mcp add engram https://<server-ip>/mcp/
+claude mcp add --transport http engram https://<server-ip>/mcp/
 ```
 
 ## Step 6: Test It

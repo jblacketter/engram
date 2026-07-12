@@ -74,12 +74,15 @@ The supported install path is **source + Docker**:
 git clone https://github.com/jblacketter/engram.git && cd engram
 
 # 2. Start database + Ollama via Docker
-#    (omit the ollama service if Ollama already runs natively on :11434:
-#     docker compose up -d db)
 docker compose up -d
 
-# 3. Pull the embedding model
-ollama pull nomic-embed-text
+# 3. Pull the embedding model into the Ollama container
+docker compose exec ollama ollama pull nomic-embed-text
+
+# (Alternative: if Ollama already runs natively on :11434, start only the
+#  database and pull on the host instead:
+#    docker compose up -d db
+#    ollama pull nomic-embed-text)
 
 # 4. Install Python dependencies
 pip install -e ".[dev]"

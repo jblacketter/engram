@@ -50,7 +50,9 @@ In scope:
    suite (2 files).
 4. **Live MCP round-trip.** Start Django (`runserver`) and the MCP server
    (`python -m mcp_server`), connect Claude Code
-   (`claude mcp add engram http://localhost:8080/mcp`), and verify:
+   (`claude mcp add --transport http engram http://localhost:8080/mcp` —
+   without `--transport http` the CLI registers a broken stdio server, as
+   discovered during implementation), and verify:
    `store_memory` → `search_brain` finds it semantically → `find_related`
    returns sensible neighbors → `list_recent_memories` with a
    `domain:<name>` tag filter behaves per the scoping convention.
@@ -60,10 +62,12 @@ In scope:
      importing the Python modules (the current
      `pip install engram-semantic` → `python manage.py migrate` sequence
      cannot work from the wheel).
-   - Document prod-compose boot requirements: `DJANGO_SECRET_KEY`,
-     `DJANGO_ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS` must be present in
-     `.env` (settings read them with no defaults; compose files do not set
-     them). Add a short preflight note to `docs/setup-docker.md`.
+   - Document prod-compose boot requirements: `DJANGO_SECRET_KEY` and
+     `DJANGO_ALLOWED_HOSTS` must be present in `.env` (settings read them
+     with no defaults; compose files do not set them). `CORS_ALLOWED_ORIGINS`
+     has an empty default — it doesn't block boot but should be set for the
+     intended browser/LAN configuration. Add a short preflight note to
+     `docs/setup-docker.md`.
    - Correct stale claims: `SHARED_BRAIN_REVIVAL.md`'s "frontend TODOs in
      MemoryForm/SearchPage" is unsubstantiated — both are complete.
 6. **Housekeeping.** Commit the roadmap status updates (phases 1–8 →

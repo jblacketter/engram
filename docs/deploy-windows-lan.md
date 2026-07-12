@@ -124,7 +124,7 @@ From any device on your LAN:
 ### Claude Code (from any machine on LAN)
 
 ```bash
-claude mcp add engram http://192.168.1.100/mcp/ --header "Authorization: Bearer <your-mcp-key>"
+claude mcp add --transport http engram http://192.168.1.100/mcp/ --header "Authorization: Bearer <your-mcp-key>"
 ```
 
 ### Claude Desktop
