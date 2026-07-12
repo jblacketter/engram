@@ -1,0 +1,21 @@
+{
+  "state": "approved",
+  "ready_for": null,
+  "round": 2,
+  "phase": "revive-and-verify",
+  "type": "impl",
+  "lead": "claude",
+  "reviewer": "codex",
+  "date": "2026-07-12",
+  "baseline": {
+    "sha": "59c54b6229aa7120f6a828fe257f33b3aadb0c36",
+    "dirty_paths": [
+      " M docs/roadmap.md",
+      "?? .tagteam/",
+      "?? SHARED_BRAIN_REVIVAL.md",
+      "?? docs/phases/"
+    ],
+    "captured_at": "2026-07-12T05:23:23.564417+00:00",
+    "source": "copied-from-plan"
+  }
+}

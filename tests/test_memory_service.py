@@ -71,7 +71,7 @@ class TestUpdateMemory:
 
         updated = await memory_service.update_memory(mem.id, content="Updated")
         assert updated.content == "Updated"
-        mock_embed.assert_called_once_with("Updated")
+        mock_embed.assert_called_once_with("Updated", allow_cloud_fallback=True)
 
     @pytest.mark.asyncio
     async def test_update_non_content_field_skips_embed(self, mock_embed):

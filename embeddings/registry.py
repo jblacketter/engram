@@ -35,12 +35,19 @@ def _validate_dimensions_batch(vectors: list[list[float]]) -> list[list[float]]:
     return vectors
 
 
-async def embed(text: str) -> list[float]:
-    """Embed text using primary provider with fallback. Validates dimensions."""
+async def embed(text: str, allow_cloud_fallback: bool = True) -> list[float]:
+    """Embed text using primary provider with fallback. Validates dimensions.
+
+    allow_cloud_fallback=False disables the OpenRouter fallback entirely —
+    private content (identity sync) must never be silently transmitted to a
+    cloud provider; on local-provider failure the error propagates.
+    """
     provider = get_provider()
     try:
         vector = await provider.embed(text)
     except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+        if not allow_cloud_fallback:
+            raise
         fallback = get_fallback_provider()
         if fallback is None:
             raise

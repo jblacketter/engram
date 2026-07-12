@@ -296,3 +296,54 @@ Real-world usage is logged in `docs/adoption-log.md`. The Phase 12
 (agent-scoping) project-model decision is gated on that log: meaningful use
 across at least two projects confirmed by the human, or an explicit
 "insufficient evidence — deferred" entry.
+
+## Identity & onboarding
+
+The AgentOS identity pillar. Identity lives as plain markdown in
+`ENGRAM_IDENTITY_DIR` (default `~/.engram/identity/`) — make it a git
+repository; it is the portable source of truth and survives switching
+tools:
+
+```
+identity/
+  identity.md          # who you are, preferences, house rules (your words)
+  context/<topic>.md   # standing knowledge; topic slug [a-z0-9_-]
+  projects/<domain>.md # canonical long-form project context; domain slug [a-z0-9-]
+```
+
+Setup: `python manage.py init_identity` scaffolds commented templates
+(never overwrites; tooling never invents identity content — you write it),
+then `python manage.py sync_identity` makes the files semantically
+searchable in engram.
+
+**Sync semantics:** deterministic per-file provenance
+(`metadata.provenance = {system: identity_sync, key: identity:<path>,
+sha256}`, queried by system+key with no recency limit). Unchanged files
+skip; edited files update in place; deleted files are reported as orphans.
+Deletion is host-admin-only: `--prune` removes orphans, and
+`--repair-duplicates` collapses pre-existing duplicate rows (ordinary sync
+skips such files and reports). Files over 262,144 bytes or not valid
+UTF-8 are rejected per-file. **Identity content is embedded locally
+only** — the cloud fallback is disabled for identity sync unless
+`ENGRAM_IDENTITY_CLOUD_EMBED=true`.
+
+**MCP resources (read-only):** `engram://identity`, `engram://context`,
+`engram://context/{topic}`, `engram://projects`,
+`engram://projects/{domain}` — served from disk at request time with slug
+validation and path containment.
+
+**Onboarding:** the `onboard_agent` MCP tool (args: `domain`,
+`client_name`) returns one bounded document: your identity (trusted
+instructions), the engram conventions, connection info
+(`ENGRAM_PUBLIC_REST_URL` / `ENGRAM_PUBLIC_MCP_URL` — never secrets), and
+per-domain project context + latest status + recent checkpoints (labeled
+reference data, sanitized like ambient recall). The MCP `sync_identity`
+tool is report-only.
+
+**Tagteam boundary:** `python manage.py ingest_tagteam_cycles --repo
+<path>` imports **approved** cycles from tagteam's rendered JSONL exports
+(`docs/handoffs/*_rounds.jsonl`) as `type:cycle-summary` memories —
+citable evidence for status proposals. The exports are refresh-able with
+`tagteam cycle render --phase <phase> --type <plan|impl>`; tagteam's
+database (`.tagteam/tagteam.db`) is the source of truth and is never
+parsed; engram never writes tagteam state.

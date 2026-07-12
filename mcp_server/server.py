@@ -14,6 +14,7 @@ mcp = FastMCP("engram", auth=build_auth())
 # Import tool/prompt modules to register @mcp.tool() / @mcp.prompt() decorators
 import mcp_server.tools  # noqa: F401, E402
 import mcp_server.prompts  # noqa: F401, E402
+import mcp_server.resources  # noqa: F401, E402
 
 
 def main():

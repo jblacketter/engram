@@ -158,3 +158,26 @@ If it returns your stored memory, everything is working.
 | Ollama model not found | Run `ollama pull nomic-embed-text` (or exec into the container for prod). |
 | MCP connection refused | Check that port 8080 is accessible: `curl http://localhost:8080/mcp` |
 | Django migration errors | Run `docker compose exec django python manage.py migrate` |
+
+## Identity directory in containers
+
+The identity directory (`ENGRAM_IDENTITY_DIR`, see `docs/workflows.md`) is
+a host-owned git repo. Containers must mount it **read-only**:
+
+```yaml
+services:
+  django:
+    volumes:
+      - ~/.engram/identity:/identity:ro
+    environment:
+      - ENGRAM_IDENTITY_DIR=/identity
+  mcp:
+    volumes:
+      - ~/.engram/identity:/identity:ro
+    environment:
+      - ENGRAM_IDENTITY_DIR=/identity
+```
+
+`init_identity` (and any editing) remains a deliberate host action — the
+services only read. Wiring this into `docker-compose.prod.yml` is a
+Phase 13 roadmap deliverable.

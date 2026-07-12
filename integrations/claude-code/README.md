@@ -101,3 +101,15 @@ directory name → cwd basename.
 
 Conventions (tags, status snapshot contract) are documented in
 `docs/workflows.md`.
+
+## New machine / new agent onboarding
+
+1. On the host: `python manage.py init_identity`, then write
+   `identity.md` (and `context/`, `projects/`) yourself — tooling never
+   invents identity content. Make the directory a git repo.
+2. `python manage.py sync_identity` to make it searchable.
+3. Any new agent session: call the `onboard_agent` MCP tool (optionally
+   with `domain=<project>`) — it returns who you are, house rules, engram
+   conventions, connection info, and the project's current state in one
+   call. Identity and project context are also readable as MCP resources
+   (`engram://identity`, `engram://projects/<domain>`).

@@ -18,8 +18,9 @@ async def create_memory(
     tags: list[str] | None = None,
     metadata: dict | None = None,
     importance: float = 0.5,
+    allow_cloud_fallback: bool = True,
 ) -> Memory:
-    vector = await embed(content)
+    vector = await embed(content, allow_cloud_fallback=allow_cloud_fallback)
     memory = await sync_to_async(Memory.objects.create)(
         content=content,
         embedding=vector,
@@ -50,12 +51,20 @@ async def get_memory(memory_id: UUID) -> Memory:
     return await sync_to_async(Memory.objects.get)(pk=memory_id)
 
 
-async def update_memory(memory_id: UUID, **fields) -> Memory:
-    """Update a memory. Re-embeds if content changes."""
+async def update_memory(
+    memory_id: UUID, allow_cloud_fallback: bool = True, **fields
+) -> Memory:
+    """Update a memory. Re-embeds if content changes.
+
+    Embedding happens before any field is written, so an embed failure
+    (including a disabled cloud fallback) leaves the memory unchanged.
+    """
     memory = await sync_to_async(Memory.objects.get)(pk=memory_id)
 
     if "content" in fields:
-        fields["embedding"] = await embed(fields["content"])
+        fields["embedding"] = await embed(
+            fields["content"], allow_cloud_fallback=allow_cloud_fallback
+        )
 
     for attr, value in fields.items():
         setattr(memory, attr, value)

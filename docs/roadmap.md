@@ -366,6 +366,7 @@ Decisions recorded 2026-07-11:
 - **Description:** Windows/WSL2 LAN deployment (the intended personal hosting target), scheduled maintenance, and remaining cleanups.
 - **Key Deliverables:**
   - **Windows/WSL2 LAN deployment** of the prod compose stack with GPU-accelerated Ollama — the personal deployment target, now that the daily workflow is proven
+  - Identity-directory container wiring: mount the user's identity repo read-only into the Django/MCP services (`~/.engram/identity:/identity:ro`, `ENGRAM_IDENTITY_DIR=/identity`) per the contract documented in Phase 11
   - Scheduled decay runs and weekly digest report
   - Embedding registry made config-driven (currently hardcodes Ollama)
   - Docker image pinning (`ollama/ollama`, `nginx`)

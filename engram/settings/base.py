@@ -109,6 +109,24 @@ MCP_API_KEY = os.getenv("MCP_API_KEY", "")
 # REST API
 REST_API_KEY = os.getenv("REST_API_KEY", "")
 
+# Identity & onboarding (Phase 11)
+ENGRAM_IDENTITY_DIR = os.getenv(
+    "ENGRAM_IDENTITY_DIR", os.path.expanduser("~/.engram/identity")
+)
+# Private identity content is embedded locally only, unless explicitly
+# opted in to the cloud fallback provider.
+ENGRAM_IDENTITY_CLOUD_EMBED = os.getenv(
+    "ENGRAM_IDENTITY_CLOUD_EMBED", ""
+).lower() in ("1", "true", "yes")
+# Public (non-secret) connection info returned by onboard_agent — override
+# for LAN/WSL/nginx deployments.
+ENGRAM_PUBLIC_REST_URL = os.getenv(
+    "ENGRAM_PUBLIC_REST_URL", "http://localhost:8000/api"
+)
+ENGRAM_PUBLIC_MCP_URL = os.getenv(
+    "ENGRAM_PUBLIC_MCP_URL", "http://localhost:8080/mcp"
+)
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "api.authentication.APIKeyAuthentication",
