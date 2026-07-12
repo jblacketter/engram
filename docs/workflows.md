@@ -238,7 +238,16 @@ conventions.
 
 Domain resolution (hook and skill): `ENGRAM_DOMAIN` env var → `.engram`
 marker (`domain=<slug>`, found by upward walk from cwd) → git root
-directory name → cwd basename; slugs normalize to `[a-z0-9-]`.
+directory name (a `.git` file or directory both count — worktrees have a
+file) → cwd basename; slugs normalize to `[a-z0-9-]`.
+
+**Trust note:** a repository-controlled `.engram` file selects which
+domain is loaded into the session — review it when opening untrusted
+repositories, and never let an untrusted project point at a sensitive
+domain. The hook injects recalled memories with an explicit
+untrusted-reference warning, sanitizes markup so content cannot escape the
+context envelope, and excludes raw `ingested` document chunks from ambient
+recall (they remain reachable via explicit search).
 
 ## The status snapshot contract
 

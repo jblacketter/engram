@@ -78,6 +78,14 @@ domain=my-project
 Precedence: `ENGRAM_DOMAIN` env var → `.engram` marker → git root
 directory name → cwd basename.
 
+> **Trust note:** the `.engram` marker is repository-controlled — it decides
+> which domain's memories get loaded into your session. When opening an
+> untrusted repository, review its `.engram` file first, and don't let an
+> untrusted project point at a sensitive domain. Recalled memories are
+> injected as untrusted reference material (the hook labels them as such
+> and excludes raw ingested document chunks), but domain selection is
+> still yours to guard.
+
 ## 5. Daily loop
 
 - **Start of day:** use the `start_day` MCP prompt for a cross-project
