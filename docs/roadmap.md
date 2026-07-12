@@ -301,7 +301,7 @@ Decisions recorded 2026-07-11:
   with fully automatic capture as the trusted end-state.
 
 ### Phase 9: Revive and Verify
-- **Status:** Not Started
+- **Status:** Complete
 - **Dependencies:** None
 - **Description:** Bring the stack back up on the Mac, re-establish the test baseline, and verify the full store→search→recall loop live from Claude Code over MCP.
 - **Key Deliverables:**
