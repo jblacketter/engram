@@ -87,9 +87,14 @@ services:
       - |
         while true; do
           if [ "$$(date +%u)" = "1" ]; then
-            python manage.py maintenance --digest || echo "maintenance failed"
+            python manage.py maintenance --digest
           else
-            python manage.py maintenance || echo "maintenance failed"
+            python manage.py maintenance
+          fi
+          code=$$?
+          if [ "$$code" -ne 0 ]; then
+            echo "maintenance failed with exit $$code" >&2
+            exit "$$code"
           fi
           sleep 86400
         done

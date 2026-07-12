@@ -118,3 +118,67 @@ class TestIdentitySyncCloudPrimaryRefusal:
         ):
             report = await identity_service.sync(tmp_path)
         assert len(report["created"]) == 1
+
+
+class TestSchedulerCommandPropagatesFailure:
+    """Regression: the compose scheduler loop must NOT suppress a failing
+    `maintenance` invocation — the container has to exit non-zero so
+    compose observes the failure instead of a log line."""
+
+    def _scheduler_command(self):
+        import yaml
+        from pathlib import Path
+        compose = yaml.safe_load(
+            (Path(__file__).parent.parent / "docker-compose.prod.yml").read_text()
+        )
+        service = compose["services"]["scheduler"]
+        assert service["entrypoint"] == ["sh", "-c"]
+        # compose $$ escaping -> literal $ for the container shell
+        return service["command"][0].replace("$$", "$")
+
+    def test_failing_maintenance_exits_loop_nonzero(self, tmp_path):
+        import stat
+        import subprocess
+        script = self._scheduler_command()
+        assert "|| echo" not in script  # the old masking pattern is gone
+
+        # Stub `python` that fails with a distinctive code
+        stub = tmp_path / "python"
+        stub.write_text("#!/bin/sh\nexit 7\n")
+        stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+        env = {"PATH": f"{tmp_path}:/usr/bin:/bin"}
+
+        proc = subprocess.run(
+            ["sh", "-c", script], env=env,
+            capture_output=True, text=True, timeout=10,
+        )
+        assert proc.returncode == 7  # failure propagated, loop did not continue
+        assert "maintenance failed with exit 7" in proc.stderr
+
+    def test_success_reaches_sleep_then_later_failure_still_propagates(self, tmp_path):
+        """A succeeding run continues to the daily sleep (no spurious exit),
+        and a failure on a LATER iteration still exits the loop non-zero."""
+        import stat
+        import subprocess
+        script = self._scheduler_command()
+
+        state = tmp_path / "ran-once"
+        stub = tmp_path / "python"
+        stub.write_text(
+            "#!/bin/sh\n"
+            f"if [ -f '{state}' ]; then exit 7; fi\n"
+            f"touch '{state}'\n"
+            "exit 0\n"
+        )
+        stub.chmod(stub.stat().st_mode | stat.S_IEXEC)
+        sleep_stub = tmp_path / "sleep"
+        sleep_stub.write_text("#!/bin/sh\necho SLEPT-$1\nexit 0\n")
+        sleep_stub.chmod(sleep_stub.stat().st_mode | stat.S_IEXEC)
+        env = {"PATH": f"{tmp_path}:/usr/bin:/bin"}
+
+        proc = subprocess.run(
+            ["sh", "-c", script], env=env,
+            capture_output=True, text=True, timeout=10,
+        )
+        assert "SLEPT-86400" in proc.stdout   # success path reached the sleep
+        assert proc.returncode == 7           # later failure still propagated
