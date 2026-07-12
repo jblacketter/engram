@@ -272,3 +272,60 @@ class TestListRecentFilterChain:
             await memory_service.list_recent(tags=[])
 
             qs.filter.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+class TestListRecentDailyDriverFilters:
+    """exclude_tags and after filters added for the daily-driver phase."""
+
+    @pytest.mark.asyncio
+    async def test_exclude_tags_omits_matching_memories(self):
+        await memory_service.create_memory(
+            "Status snapshot", tags=["domain:eng", "type:project-status"]
+        )
+        await memory_service.create_memory(
+            "Checkpoint", tags=["domain:eng", "type:checkpoint"]
+        )
+        await memory_service.create_memory("Note", tags=["domain:eng"])
+
+        results = await memory_service.list_recent(
+            tags=["domain:eng"], exclude_tags=["type:project-status"]
+        )
+        contents = {m.content for m in results}
+        assert contents == {"Checkpoint", "Note"}
+
+    @pytest.mark.asyncio
+    async def test_exclude_tags_any_of_semantics(self):
+        await memory_service.create_memory("A", tags=["x"])
+        await memory_service.create_memory("B", tags=["y"])
+        await memory_service.create_memory("C", tags=["x", "y"])
+        await memory_service.create_memory("D", tags=["z"])
+
+        results = await memory_service.list_recent(exclude_tags=["x", "y"])
+        assert {m.content for m in results} == {"D"}
+
+    @pytest.mark.asyncio
+    async def test_after_filters_by_created_at(self):
+        from datetime import datetime, timedelta, timezone as tz
+
+        await memory_service.create_memory("Old enough")
+        now = datetime.now(tz.utc)
+
+        past = await memory_service.list_recent(after=now - timedelta(days=1))
+        assert {m.content for m in past} == {"Old enough"}
+
+        future = await memory_service.list_recent(after=now + timedelta(days=1))
+        assert future == []
+
+    @pytest.mark.asyncio
+    async def test_after_combines_with_tags(self):
+        from datetime import datetime, timedelta, timezone as tz
+
+        await memory_service.create_memory("Tagged", tags=["domain:eng"])
+        await memory_service.create_memory("Other", tags=["domain:qa"])
+        cutoff = datetime.now(tz.utc) - timedelta(days=1)
+
+        results = await memory_service.list_recent(
+            tags=["domain:eng"], after=cutoff
+        )
+        assert {m.content for m in results} == {"Tagged"}

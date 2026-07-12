@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
 
@@ -93,10 +93,23 @@ async def list_recent_memories(
     limit: int = 20,
     source: str | None = None,
     tags: list[str] | None = None,
+    after: str | None = None,
 ) -> str:
     """List the most recently created memories, optionally filtered by source
-    and/or tags — see the README section "Scoping memories across domains"."""
-    memories = await memory_service.list_recent(limit=limit, source=source, tags=tags)
+    and/or tags — see the README section "Scoping memories across domains".
+    `after` is an ISO 8601 date or datetime; only memories created at or
+    after it are returned (use it for time-bounded reviews)."""
+    after_dt = None
+    if after:
+        try:
+            after_dt = datetime.fromisoformat(after)
+        except ValueError:
+            return f"Invalid 'after' value: {after!r}. Use ISO 8601, e.g. 2026-07-04."
+        if after_dt.tzinfo is None:
+            after_dt = after_dt.replace(tzinfo=timezone.utc)
+    memories = await memory_service.list_recent(
+        limit=limit, source=source, tags=tags, after=after_dt
+    )
     if not memories:
         return "No memories found."
     data = [

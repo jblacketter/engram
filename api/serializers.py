@@ -47,6 +47,33 @@ class MemoryUpdateSerializer(serializers.Serializer):
     importance = serializers.FloatField(min_value=0.0, max_value=1.0, required=False)
 
 
+class MemoryListQuerySerializer(serializers.Serializer):
+    """Query params for GET /api/memories/ — deterministic scoped listing.
+
+    `tags` is ALL-of (jsonb containment); `exclude_tags` is ANY-of exclusion.
+    Both are comma-separated in the query string.
+    """
+
+    tags = serializers.CharField(required=False)
+    exclude_tags = serializers.CharField(required=False)
+    source = serializers.CharField(max_length=50, required=False)
+    limit = serializers.IntegerField(min_value=1, max_value=100, default=20)
+
+    def _split(self, value, field, max_items):
+        items = [t.strip() for t in value.split(",") if t.strip()]
+        if len(items) > max_items:
+            raise serializers.ValidationError(
+                f"{field} accepts at most {max_items} tags."
+            )
+        return items
+
+    def validate_tags(self, value):
+        return self._split(value, "tags", 10)
+
+    def validate_exclude_tags(self, value):
+        return self._split(value, "exclude_tags", 5)
+
+
 class SearchRequestSerializer(serializers.Serializer):
     """Input for hybrid search."""
 

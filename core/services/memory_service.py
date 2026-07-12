@@ -76,6 +76,8 @@ async def list_recent(
     limit: int = 20,
     source: str | None = None,
     tags: list[str] | None = None,
+    exclude_tags: list[str] | None = None,
+    after: datetime | None = None,
 ) -> list[Memory]:
     qs = Memory.objects.order_by("-created_at")
     if source is not None:
@@ -83,4 +85,10 @@ async def list_recent(
     if tags:
         # All-of semantics matching build_hybrid_query (jsonb @> operator)
         qs = qs.filter(tags__contains=tags)
+    if exclude_tags:
+        # Any-of exclusion: a memory carrying any excluded tag is omitted
+        for tag in exclude_tags:
+            qs = qs.exclude(tags__contains=[tag])
+    if after is not None:
+        qs = qs.filter(created_at__gte=after)
     return await sync_to_async(list)(qs[:limit])

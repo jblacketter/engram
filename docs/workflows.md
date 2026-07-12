@@ -217,3 +217,70 @@ Use `/handoff-cycle` to reduce manual copy-paste during multi-round reviews. Ins
 - Simple one-round reviews
 - Need detailed structured feedback
 - Prefer separate files for each interaction
+
+---
+
+# Daily Driver: Engram in Everyday Sessions
+
+How engram integrates into daily Claude Code work. Setup instructions live
+in `integrations/claude-code/README.md`; this section defines the
+conventions.
+
+## Tag conventions
+
+| Tag | Meaning |
+|-----|---------|
+| `domain:<slug>` | Which project a memory belongs to (one per memory) |
+| `project:<slug>` | Optional finer-grained scope within a domain |
+| `type:project-status` | A full project-status snapshot (newest per domain is canonical) |
+| `type:checkpoint` | A session delta: decisions, learnings, open threads |
+| `type:note` | An explicit ad-hoc memory (`/engram store`) |
+
+Domain resolution (hook and skill): `ENGRAM_DOMAIN` env var → `.engram`
+marker (`domain=<slug>`, found by upward walk from cwd) → git root
+directory name → cwd basename; slugs normalize to `[a-z0-9-]`.
+
+## The status snapshot contract
+
+A `type:project-status` memory is always a **full snapshot**, never a
+delta:
+
+```markdown
+# Status: <domain>
+Goal: <one-line project goal>
+State: <current state, 1-3 lines>
+Recent: <progress since last snapshot>
+Blockers: <blockers / open questions, or "none">
+Next: <next actions>
+Updated: <YYYY-MM-DD> | Evidence: <checkpoint memory id(s) or "manual">
+```
+
+Retrieval is deterministic, not semantic: latest snapshot via
+`GET /api/memories/?tags=domain:<d>,type:project-status&limit=1` (or the
+equivalent `list_recent_memories` call); recent non-status activity via
+`tags=domain:<d>&exclude_tags=type:project-status`.
+
+## The daily loop
+
+1. **Session start (ambient):** the SessionStart hook injects the latest
+   status snapshot + recent memories for the repo's domain. Silent when
+   engram is down or the domain is empty.
+2. **Start of day:** `start_day` MCP prompt — cross-project briefing
+   (discovers projects via `list_domains`).
+3. **During work:** `/engram search <query>`, `/engram store <text>`;
+   recall stays ambient.
+4. **Project switch:** `switch_project` MCP prompt.
+5. **End of a substantive session:** `/engram checkpoint` (or the
+   `end_session` prompt) — drafts a checkpoint + updated full snapshot,
+   stores only what you confirm. **Capture is manual and suggestion-first;
+   nothing writes without confirmation.**
+6. **Weekly:** `weekly_review` prompt — aggregates the week's checkpoints
+   per project (time-bounded via `list_recent_memories(after=...)`) and
+   proposes snapshot updates.
+
+## Adoption tracking
+
+Real-world usage is logged in `docs/adoption-log.md`. The Phase 12
+(agent-scoping) project-model decision is gated on that log: meaningful use
+across at least two projects confirmed by the human, or an explicit
+"insufficient evidence — deferred" entry.

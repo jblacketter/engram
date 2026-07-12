@@ -11,8 +11,9 @@ from mcp_server.auth import build_auth  # noqa: E402
 
 mcp = FastMCP("engram", auth=build_auth())
 
-# Import tool modules to register @mcp.tool() decorators
+# Import tool/prompt modules to register @mcp.tool() / @mcp.prompt() decorators
 import mcp_server.tools  # noqa: F401, E402
+import mcp_server.prompts  # noqa: F401, E402
 
 
 def main():

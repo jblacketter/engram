@@ -17,6 +17,7 @@ from .serializers import (
     IngestFileSerializer,
     IngestURLSerializer,
     MemoryCreateSerializer,
+    MemoryListQuerySerializer,
     MemorySerializer,
     MemoryUpdateSerializer,
     SearchRequestSerializer,
@@ -44,7 +45,15 @@ class MemoryListCreateView(APIView):
         return [WriteRateThrottle()]
 
     def get(self, request):
-        memories = async_to_sync(memory_service.list_recent)()
+        query = MemoryListQuerySerializer(data=request.query_params)
+        query.is_valid(raise_exception=True)
+        params = query.validated_data
+        memories = async_to_sync(memory_service.list_recent)(
+            limit=params["limit"],
+            source=params.get("source"),
+            tags=params.get("tags"),
+            exclude_tags=params.get("exclude_tags"),
+        )
         serializer = MemorySerializer(memories, many=True)
         return Response(serializer.data)
 

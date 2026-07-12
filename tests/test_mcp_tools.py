@@ -381,7 +381,9 @@ class TestListRecentMemories:
             from mcp_server.tools.search import list_recent_memories
             result = await list_recent_memories.fn(limit=5, source="api")
 
-            svc.list_recent.assert_called_once_with(limit=5, source="api", tags=None)
+            svc.list_recent.assert_called_once_with(
+                limit=5, source="api", tags=None, after=None
+            )
             data = json.loads(result)
             assert len(data) == 2
 
@@ -568,3 +570,116 @@ class TestDecimalSerialization:
 
             data = json.loads(result)
             assert isinstance(data[0]["rrf_score"], float)
+
+
+# ---------------------------------------------------------------------------
+# list_domains (daily-driver)
+# ---------------------------------------------------------------------------
+
+class TestListDomains:
+    @pytest.mark.asyncio
+    async def test_lists_domains_with_counts(self):
+        with (
+            patch("mcp_server.tools.domains.Memory") as MockMemory,
+            patch("mcp_server.tools.domains.sync_to_async") as mock_s2a,
+        ):
+            MockMemory.objects.values_list.return_value = [
+                ["domain:engram", "type:checkpoint"],
+                ["domain:engram", "type:project-status"],
+                ["domain:qa"],
+                ["untagged-is-fine"],
+                "not-a-list-ignored",
+            ]
+            mock_s2a.side_effect = lambda fn: AsyncMock(
+                side_effect=lambda *args, **kwargs: fn(*args, **kwargs)
+            )
+
+            from mcp_server.tools.domains import list_domains
+            result = await list_domains.fn()
+
+        data = json.loads(result)
+        assert data == [
+            {"domain": "engram", "count": 2},
+            {"domain": "qa", "count": 1},
+        ]
+
+    @pytest.mark.asyncio
+    async def test_no_domains_message(self):
+        with (
+            patch("mcp_server.tools.domains.Memory") as MockMemory,
+            patch("mcp_server.tools.domains.sync_to_async") as mock_s2a,
+        ):
+            MockMemory.objects.values_list.return_value = [["type:note"], []]
+            mock_s2a.side_effect = lambda fn: AsyncMock(
+                side_effect=lambda *args, **kwargs: fn(*args, **kwargs)
+            )
+
+            from mcp_server.tools.domains import list_domains
+            result = await list_domains.fn()
+
+        assert result == "No domains found."
+
+
+# ---------------------------------------------------------------------------
+# list_recent_memories `after` argument (daily-driver)
+# ---------------------------------------------------------------------------
+
+class TestListRecentMemoriesAfter:
+    @pytest.mark.asyncio
+    async def test_after_parsed_and_forwarded_utc(self):
+        from datetime import datetime as dt, timezone as tz
+        with patch(
+            "mcp_server.tools.search.memory_service.list_recent",
+            new_callable=AsyncMock,
+        ) as mock_list:
+            mock_list.return_value = []
+            from mcp_server.tools.search import list_recent_memories
+            result = await list_recent_memories.fn(
+                tags=["domain:eng"], after="2026-07-04"
+            )
+
+        assert result == "No memories found."
+        mock_list.assert_called_once_with(
+            limit=20,
+            source=None,
+            tags=["domain:eng"],
+            after=dt(2026, 7, 4, tzinfo=tz.utc),
+        )
+
+    @pytest.mark.asyncio
+    async def test_after_preserves_explicit_timezone(self):
+        from datetime import datetime as dt, timedelta, timezone as tz
+        with patch(
+            "mcp_server.tools.search.memory_service.list_recent",
+            new_callable=AsyncMock,
+        ) as mock_list:
+            mock_list.return_value = []
+            from mcp_server.tools.search import list_recent_memories
+            await list_recent_memories.fn(after="2026-07-04T10:00:00-07:00")
+
+        passed = mock_list.call_args[1]["after"]
+        assert passed == dt(2026, 7, 4, 10, tzinfo=tz(timedelta(hours=-7)))
+
+    @pytest.mark.asyncio
+    async def test_invalid_after_returns_error_without_query(self):
+        with patch(
+            "mcp_server.tools.search.memory_service.list_recent",
+            new_callable=AsyncMock,
+        ) as mock_list:
+            from mcp_server.tools.search import list_recent_memories
+            result = await list_recent_memories.fn(after="last tuesday")
+
+        assert "Invalid 'after' value" in result
+        mock_list.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_no_after_passes_none(self):
+        with patch(
+            "mcp_server.tools.search.memory_service.list_recent",
+            new_callable=AsyncMock,
+        ) as mock_list:
+            mock_list.return_value = []
+            from mcp_server.tools.search import list_recent_memories
+            await list_recent_memories.fn()
+
+        assert mock_list.call_args[1]["after"] is None

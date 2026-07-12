@@ -256,3 +256,71 @@ class TestTagsView:
         assert tags["python"] == 2
         assert tags["django"] == 1
         assert tags["api"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Memory list filters (daily-driver)
+# ---------------------------------------------------------------------------
+
+class TestMemoryListFilters:
+    def _get(self, client, query):
+        with patch("api.views.memory_service") as svc:
+            svc.list_recent = AsyncMock(return_value=[])
+            response = client.get(f"/api/memories/?{query}")
+        return response, svc.list_recent
+
+    def test_default_params(self, client):
+        response, list_recent = self._get(client, "")
+        assert response.status_code == 200
+        list_recent.assert_called_once_with(
+            limit=20, source=None, tags=None, exclude_tags=None
+        )
+
+    def test_tags_source_limit_passed_through(self, client):
+        response, list_recent = self._get(
+            client, "tags=domain:eng,type:checkpoint&source=mcp&limit=5"
+        )
+        assert response.status_code == 200
+        list_recent.assert_called_once_with(
+            limit=5,
+            source="mcp",
+            tags=["domain:eng", "type:checkpoint"],
+            exclude_tags=None,
+        )
+
+    def test_exclude_tags_passed_through(self, client):
+        response, list_recent = self._get(
+            client, "tags=domain:eng&exclude_tags=type:project-status"
+        )
+        assert response.status_code == 200
+        list_recent.assert_called_once_with(
+            limit=20,
+            source=None,
+            tags=["domain:eng"],
+            exclude_tags=["type:project-status"],
+        )
+
+    def test_limit_above_max_rejected(self, client):
+        response, _ = self._get(client, "limit=101")
+        assert response.status_code == 400
+
+    def test_limit_below_min_rejected(self, client):
+        response, _ = self._get(client, "limit=0")
+        assert response.status_code == 400
+
+    def test_too_many_tags_rejected(self, client):
+        tags = ",".join(f"t{i}" for i in range(11))
+        response, _ = self._get(client, f"tags={tags}")
+        assert response.status_code == 400
+
+    def test_too_many_exclude_tags_rejected(self, client):
+        tags = ",".join(f"t{i}" for i in range(6))
+        response, _ = self._get(client, f"exclude_tags={tags}")
+        assert response.status_code == 400
+
+    def test_empty_tag_segments_ignored(self, client):
+        response, list_recent = self._get(client, "tags=domain:eng,,%20")
+        assert response.status_code == 200
+        list_recent.assert_called_once_with(
+            limit=20, source=None, tags=["domain:eng"], exclude_tags=None
+        )

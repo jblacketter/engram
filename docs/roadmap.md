@@ -321,8 +321,8 @@ Decisions recorded 2026-07-11:
 - **Description:** Ambient recall and suggestion-first capture from Claude Code — engram becomes part of every session without getting in the way.
 - **Key Deliverables:**
   - SessionStart hook: query engram for memories and project status relevant to the current project, inject as context
-  - Session-end capture, **suggestion-first**: propose a checkpoint/summary (decisions, learnings, project-status delta) for user confirmation before writing, tagged `domain:<project>`; fully automatic writes are an end-state capability once trust is established
-  - Project status/context tracking (v1): proposed-update workflow against canonical per-project status; user confirms before engram records
+  - **Manual suggestion-first checkpoint** (`/engram checkpoint` or the `end_session` MCP prompt — user-invoked, no automatic session-end write): drafts a session delta plus a **full project-status snapshot** for confirmation before storing, tagged `domain:<project>`; fully automatic capture is an end-state capability once trust is established
+  - Project status/context tracking (v1): full-snapshot `type:project-status` memories (newest per domain is canonical) with a propose→confirm→record workflow; deterministic scoped retrieval via tag/source/limit filters on `GET /api/memories/` plus a `list_domains` MCP tool
   - MCP prompts for the recurring workflows: start-day, switch-project, end-session, weekly-review
   - Per-project domain conventions documented
   - A skill for explicit store/search on top of the ambient layer
@@ -351,7 +351,7 @@ Decisions recorded 2026-07-11:
 - **Dependencies:** Phase 11
 - **Description:** Per-agent API keys with domain binding; close the unscoped read surfaces. Opens with a decision checkpoint on the long-term project model.
 - **Key Deliverables:**
-  - **Decision checkpoint (first deliverable):** evaluate — with daily-driver usage data — whether soft `domain:` tags suffice as the long-term project model or a first-class project/workspace column is warranted. Per-agent authorization and project organization solve different problems; decide and log before implementing. The auth work below proceeds either way.
+  - **Decision checkpoint (first deliverable):** evaluate — with daily-driver usage data — whether soft `domain:` tags suffice as the long-term project model or a first-class project/workspace column is warranted. **Gate:** requires either the human's confirmation of meaningful daily-driver use across ≥2 projects (recorded in `docs/adoption-log.md`) or an explicit "insufficient evidence — decision deferred" entry; a single demo does not satisfy it. Per-agent authorization and project organization solve different problems; decide and log before implementing. The auth work below proceeds either way.
   - API-key table: key hash, agent name, default domain, allowed domains
   - Server-side domain tag injection on write; domain filtering on the currently-unscoped reads (`GET /api/memories/`, `/stats/`, `/tags/`, MCP `get_memory`/`get_stats`)
   - Key management commands (create/revoke/list)
