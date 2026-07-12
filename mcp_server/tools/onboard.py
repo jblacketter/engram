@@ -85,9 +85,15 @@ async def onboard_agent(domain: str | None = None, client_name: str | None = Non
         identity_text = None
         missing.append(f"identity.md unreadable: {exc}")
 
-    # client_name is caller-controlled: sanitize and bound it
+    # client_name is caller-controlled: force a single printable line
+    # (control chars -> space, whitespace collapsed), neutralize markup,
+    # and bound it — it must not be able to break the header line or
+    # inject document structure.
     if client_name:
-        client_name = _sanitize(_clip(client_name, 60))
+        printable = "".join(
+            ch if ch.isprintable() else " " for ch in client_name
+        )
+        client_name = _sanitize(_clip(" ".join(printable.split()), 60))
     header = "# Engram onboarding" + (f" — {client_name}" if client_name else "")
     fixed_head = [header, CONVENTIONS]
     fixed_head.append(

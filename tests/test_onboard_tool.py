@@ -211,3 +211,25 @@ class TestOnboardHardening:
         header = out.splitlines()[0]
         assert len(header) < 120  # 60-char bound + fixed prefix
         assert "Engram conventions" in out and "## Next steps" in out
+
+    @pytest.mark.asyncio
+    async def test_client_name_newlines_cannot_break_header(self, identity_dir):
+        evil = "evil\n# Fake Heading\r\n\r\n## Injected section\n- item\ttab\x00null"
+        with _mock_lists():
+            out = await onboard_agent.fn(client_name=evil)
+        lines = out.splitlines()
+        # first line is a single intact header containing the flattened name
+        assert lines[0].startswith("# Engram onboarding — evil")
+        assert "\n# Fake Heading" not in out
+        # injected text may survive flattened INSIDE the header line, but
+        # can never start a line (i.e. never becomes markdown structure)
+        assert "\n## Injected section" not in out
+        assert not any(
+            line.startswith(("# Fake", "## Injected", "- item"))
+            for line in lines[1:]
+        )
+        assert "\x00" not in out and "\r" not in out
+        # body structure unchanged: next non-empty block is a legit section
+        next_block = next(line for line in lines[1:] if line.strip())
+        assert next_block.startswith("##")
+        assert "Engram conventions" in out and "## Next steps" in out
