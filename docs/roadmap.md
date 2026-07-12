@@ -375,6 +375,18 @@ Decisions recorded 2026-07-11:
 
 ---
 
+### Phase 14: Status Dashboard & Usability (candidate — not yet planned)
+- **Status:** Not Started
+- **Dependencies:** Phase 13; shaped by adoption-trial feedback
+- **Description:** Surface the agent-OS layer in the UI. The existing React dashboard shows raw memories/analytics but none of the revival-layer concepts. Captured from the human's feedback 2026-07-12: "md documents in locations outside the project are awkward — we might have to build some kind of dashboard to make this more useful."
+- **Key Deliverables (sketch, to be planned via /handoff):**
+  - Project-status view: latest snapshot + checkpoint timeline per domain
+  - Identity/context management: view (and possibly edit) `~/.engram/identity` files from the dashboard, addressing the out-of-project-markdown friction
+  - Agent-key and digest visibility; adoption-log surfacing
+- **Verify:** daily status review happens in the dashboard instead of raw file/tool spelunking
+
+---
+
 ## Security Throughout
 
 - **Secrets:** `.env` gitignored, API keys stored as bcrypt hashes, Django `SECRET_KEY` per environment

@@ -32,3 +32,12 @@ human confirms meaningful use across ≥2 projects in this log. Per-agent
 authorization (AgentKey + domain binding) proceeds independently; keys
 bind to domain tags today and would bind to workspace values identically
 if the model later hardens.
+
+## 2026-07-12 — first-use feedback (human)
+
+Setup friction noted before real daily use began: **markdown documents in
+locations outside the project (~/.engram/identity) are awkward** to work
+with day-to-day. Direction captured: likely need a dashboard phase to make
+the agent-OS layer more usable (see roadmap Phase 14 candidate). This is
+genuine adoption evidence — usability of the identity layer is part of
+what the trial measures.
