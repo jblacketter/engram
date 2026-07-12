@@ -20,3 +20,15 @@ checkpoint flow, and prompts exercised in the `engram` domain; second-repo
 install verified in `tagteam`. **This is mechanics verification, not
 adoption evidence.** The one-week trial across ≥2 projects starts now and
 runs in parallel with Phase 11.
+
+## 2026-07-12 — Phase 12 gate: insufficient evidence, decision deferred
+
+The project-model decision checkpoint (soft `domain:` tags vs first-class
+workspace column) came due at the start of agent-scoping. The daily-driver
+trial opened 2026-07-11 — no meaningful multi-project usage exists yet, so
+per the gate: **insufficient evidence — decision deferred. Soft domain
+tags remain the project model pending trial data.** Revisit condition: the
+human confirms meaningful use across ≥2 projects in this log. Per-agent
+authorization (AgentKey + domain binding) proceeds independently; keys
+bind to domain tags today and would bind to workspace values identically
+if the model later hardens.

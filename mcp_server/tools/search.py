@@ -6,7 +6,8 @@ from uuid import UUID
 import httpx
 
 from core.models import Memory
-from core.services import memory_service, search_service
+from core.services import memory_service, scoping, search_service
+from mcp_server.auth import current_agent
 from mcp_server.server import mcp
 
 
@@ -35,6 +36,10 @@ async def search_brain(
 
     semantic_weight controls the blend: 0.0 = pure keyword, 1.0 = pure semantic,
     0.5 = balanced (default). Returns ranked results with relevance scores."""
+    try:
+        tags = scoping.constrain_read_tags(await current_agent(), tags) or None
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
     try:
         results = await search_service.search(
             query=query,
@@ -66,6 +71,18 @@ async def find_related(
         uid = UUID(memory_id)
     except ValueError:
         return "Invalid memory ID format."
+    try:
+        agent = await current_agent()
+        if agent is not None:
+            from asgiref.sync import sync_to_async
+            seed_visible = await sync_to_async(
+                scoping.allowed_queryset(agent).filter(pk=uid).exists
+            )()
+            if not seed_visible:
+                return f"Memory {memory_id} not found."
+        tags = scoping.constrain_read_tags(agent, tags) or None
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
     try:
         mem = await memory_service.get_memory(uid)
     except Memory.DoesNotExist:
@@ -107,6 +124,10 @@ async def list_recent_memories(
             return f"Invalid 'after' value: {after!r}. Use ISO 8601, e.g. 2026-07-04."
         if after_dt.tzinfo is None:
             after_dt = after_dt.replace(tzinfo=timezone.utc)
+    try:
+        tags = scoping.constrain_read_tags(await current_agent(), tags) or None
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
     memories = await memory_service.list_recent(
         limit=limit, source=source, tags=tags, after=after_dt
     )

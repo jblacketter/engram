@@ -46,3 +46,27 @@ class Memory(models.Model):
 
     def __str__(self):
         return f"Memory {self.id}: {self.content[:80]}"
+
+
+class AgentKey(models.Model):
+    """Per-agent API key with domain binding (Phase 12: agent-scoping).
+
+    The plaintext secret (egk_...) is shown exactly once at creation and
+    never stored — only its SHA-256 hex. allowed_domains always contains
+    default_domain (enforced at the service layer).
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.SlugField(max_length=50, unique=True)
+    key_hash = models.CharField(max_length=64, unique=True, db_index=True)
+    default_domain = models.CharField(max_length=100)
+    allowed_domains = models.JSONField(default=list)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"AgentKey {self.name} (default={self.default_domain})"

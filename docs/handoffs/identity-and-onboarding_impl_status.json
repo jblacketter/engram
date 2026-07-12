@@ -1,0 +1,21 @@
+{
+  "state": "approved",
+  "ready_for": null,
+  "round": 3,
+  "phase": "identity-and-onboarding",
+  "type": "impl",
+  "lead": "claude",
+  "reviewer": "codex",
+  "date": "2026-07-12",
+  "baseline": {
+    "sha": "01fa9d605706c90ca85b39cd6f9e2198f4bc2db8",
+    "dirty_paths": [
+      "?? .tagteam/",
+      "?? docs/handoffs/",
+      "?? docs/phases/identity-and-onboarding.md",
+      "?? handoff-state.json"
+    ],
+    "captured_at": "2026-07-12T06:48:25.456522+00:00",
+    "source": "copied-from-plan"
+  }
+}

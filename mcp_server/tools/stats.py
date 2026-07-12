@@ -5,30 +5,38 @@ from asgiref.sync import sync_to_async
 from django.db.models import Count, Max, Min
 
 from core.models import Memory
+from core.services import scoping
+from mcp_server.auth import current_agent
 from mcp_server.server import mcp
 
 
 @mcp.tool()
 async def get_stats() -> str:
     """Get statistics about stored memories: total count, counts by source,
-    most common tags, and date range."""
-    total = await sync_to_async(Memory.objects.count)()
+    most common tags, and date range. Agent principals see only their
+    allowed domains."""
+    try:
+        agent = await current_agent()
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
+    qs = Memory.objects if agent is None else scoping.allowed_queryset(agent)
+    total = await sync_to_async(qs.count)()
 
     if total == 0:
         return json.dumps({"total": 0, "by_source": {}, "top_tags": [], "date_range": None})
 
     # Source breakdown
-    source_qs = Memory.objects.values("source").annotate(count=Count("id"))
+    source_qs = qs.values("source").annotate(count=Count("id"))
     source_rows = await sync_to_async(list)(source_qs)
     by_source = {row["source"]: row["count"] for row in source_rows}
 
     # Date range
     agg = await sync_to_async(
-        Memory.objects.aggregate
+        qs.aggregate
     )(earliest=Min("created_at"), latest=Max("created_at"))
 
     # Tag frequency — aggregate from JSONField in Python
-    all_memories = await sync_to_async(list)(Memory.objects.values_list("tags", flat=True))
+    all_memories = await sync_to_async(list)(qs.values_list("tags", flat=True))
     tag_counter = Counter()
     for tags in all_memories:
         if isinstance(tags, list):

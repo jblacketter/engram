@@ -3,8 +3,10 @@
 import base64
 import json
 
+from core.services import scoping
 from ingestion.file_ingestor import ingest_file as _ingest_file
 from ingestion.url_scraper import SSRFError, scrape_url
+from mcp_server.auth import current_agent
 from mcp_server.server import mcp
 
 
@@ -15,6 +17,10 @@ async def store_from_url(
     importance: float = 0.5,
 ) -> str:
     """Fetch a URL and store its content as memories."""
+    try:
+        tags = scoping.check_write_tags(await current_agent(), tags)
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
     try:
         results = await scrape_url(url=url, tags=tags, importance=importance)
         return json.dumps({
@@ -41,6 +47,10 @@ async def ingest_file(
     except Exception:
         return "Error: invalid base64 content"
 
+    try:
+        tags = scoping.check_write_tags(await current_agent(), tags)
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
     try:
         results = await _ingest_file(
             file_bytes=file_bytes,

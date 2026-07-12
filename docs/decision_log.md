@@ -6,6 +6,20 @@ This log tracks important decisions made during the project.
 
 ---
 
+## 2026-07-12: Project-model checkpoint — deferred (insufficient evidence)
+
+**Decision:** Defer the soft-tags-vs-workspace-column decision. Soft `domain:` tags remain the project model. Per-agent authorization (Phase 12) proceeds independently.
+
+**Context:** The roadmap gates this decision on daily-driver adoption evidence across >=2 projects (docs/adoption-log.md). The trial opened 2026-07-11; no such evidence can exist yet, and the gate's designed fallback is an explicit deferral rather than a decision without data.
+
+**Revisit:** After the human records meaningful multi-project usage in the adoption log.
+
+**Decided By:** Gate contract (roadmap Phase 12), recorded by lead; human may override at any time.
+
+**Phase:** agent-scoping
+
+---
+
 ## 2026-07-11: Deploy target — Mac now, Windows/WSL2 LAN as the intended personal deployment
 
 **Decision:** Develop and verify on the Mac (native Ollama + Docker Postgres). Windows/WSL2 LAN hosting with GPU is the intended personal deployment, scheduled in the `automations-and-polish` phase after the daily workflow is proven.

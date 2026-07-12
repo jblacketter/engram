@@ -1,6 +1,6 @@
 import pytest
 
-from fastmcp.server.auth.providers.debug import DebugTokenVerifier
+from mcp_server.auth import EngramTokenVerifier
 
 from mcp_server.auth import build_auth
 
@@ -9,7 +9,7 @@ class TestBuildAuthSecuredMode:
     def test_returns_verifier_when_key_set(self, settings):
         settings.MCP_API_KEY = "test-secret"
         auth = build_auth()
-        assert isinstance(auth, DebugTokenVerifier)
+        assert isinstance(auth, EngramTokenVerifier)
 
     @pytest.mark.asyncio
     async def test_verifier_accepts_valid_token(self, settings):

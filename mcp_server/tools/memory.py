@@ -3,9 +3,23 @@ from uuid import UUID
 
 import httpx
 
+from asgiref.sync import sync_to_async
+
 from core.models import Memory
-from core.services import memory_service
+from core.services import memory_service, scoping
+from mcp_server.auth import current_agent
 from mcp_server.server import mcp
+
+
+async def _agent_blocked(uid) -> bool:
+    """True when the current agent principal cannot see this memory.
+    Owner/anonymous: never blocked. Raises ScopeError on revoked keys."""
+    agent = await current_agent()
+    if agent is None:
+        return False
+    return not await sync_to_async(
+        scoping.allowed_queryset(agent).filter(pk=uid).exists
+    )()
 
 
 @mcp.tool()
@@ -16,6 +30,10 @@ async def store_memory(
     importance: float = 0.5,
 ) -> str:
     """Store a new memory in the brain. Returns the memory ID."""
+    try:
+        tags = scoping.check_write_tags(await current_agent(), tags)
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
     try:
         mem = await memory_service.create_memory(
             content=content,
@@ -35,6 +53,11 @@ async def get_memory(memory_id: str) -> str:
         uid = UUID(memory_id)
     except ValueError:
         return "Invalid memory ID format."
+    try:
+        if await _agent_blocked(uid):
+            return f"Memory {memory_id} not found."
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
     try:
         mem = await memory_service.get_memory(uid)
         return json.dumps({
@@ -78,6 +101,16 @@ async def update_memory(
         return "No fields to update."
 
     try:
+        if await _agent_blocked(uid):
+            return f"Memory {memory_id} not found."
+        if "tags" in fields:
+            fields["tags"] = scoping.check_write_tags(
+                await current_agent(), fields["tags"]
+            )
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
+
+    try:
         mem = await memory_service.update_memory(uid, **fields)
         return json.dumps({"id": str(mem.id), "status": "updated"})
     except Memory.DoesNotExist:
@@ -93,6 +126,11 @@ async def delete_memory(memory_id: str) -> str:
         uid = UUID(memory_id)
     except ValueError:
         return "Invalid memory ID format."
+    try:
+        if await _agent_blocked(uid):
+            return f"Memory {memory_id} not found."
+    except scoping.ScopeError as exc:
+        return f"Scope error: {exc}"
     try:
         await memory_service.delete_memory(uid)
         return f"Deleted memory {memory_id}."

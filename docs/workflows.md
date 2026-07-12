@@ -347,3 +347,16 @@ citable evidence for status proposals. The exports are refresh-able with
 `tagteam cycle render --phase <phase> --type <plan|impl>`; tagteam's
 database (`.tagteam/tagteam.db`) is the source of truth and is never
 parsed; engram never writes tagteam state.
+
+## Per-agent keys (agent-scoping)
+
+Every agent/tool can hold its own `egk_…` key bound to a default domain
+and an allowed-domain list (`python manage.py agent_keys create <name>
+--default-domain <slug> [--allow <slug> ...]`). Enforcement is identical
+on REST and MCP (one shared module, `core/services/scoping.py`): writes
+inject the default domain or reject out-of-scope domains; reads default
+to the key's default domain; formerly unscoped surfaces (list, detail,
+stats, tags, get_memory, get_stats, list_domains) are filtered to the
+key's allowed domains with 404-not-403 for invisible ids. The owner
+surface (global key, dashboard) keeps full visibility. See the README
+"Scoping memories across domains" section for the full contract.

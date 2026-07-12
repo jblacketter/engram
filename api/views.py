@@ -10,7 +10,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.models import Memory
-from core.services import memory_service, search_service
+from core.services import memory_service, scoping, search_service
+
+from .authentication import request_agent
 
 from .serializers import (
     IngestBatchSerializer,
@@ -48,10 +50,16 @@ class MemoryListCreateView(APIView):
         query = MemoryListQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         params = query.validated_data
+        try:
+            tags = scoping.constrain_read_tags(
+                request_agent(request), params.get("tags")
+            )
+        except scoping.ScopeError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
         memories = async_to_sync(memory_service.list_recent)(
             limit=params["limit"],
             source=params.get("source"),
-            tags=params.get("tags"),
+            tags=tags or None,
             exclude_tags=params.get("exclude_tags"),
         )
         serializer = MemorySerializer(memories, many=True)
@@ -60,10 +68,15 @@ class MemoryListCreateView(APIView):
     def post(self, request):
         serializer = MemoryCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
         try:
-            memory = async_to_sync(memory_service.create_memory)(
-                **serializer.validated_data
+            data["tags"] = scoping.check_write_tags(
+                request_agent(request), data.get("tags")
             )
+        except scoping.ScopeError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            memory = async_to_sync(memory_service.create_memory)(**data)
         except (httpx.ConnectError, httpx.ConnectTimeout):
             return Response(
                 {"error": "Embedding service unavailable."},
@@ -78,7 +91,19 @@ class MemoryDetailView(APIView):
             return [ReadRateThrottle()]
         return [WriteRateThrottle()]
 
+    def _out_of_scope(self, request, pk) -> bool:
+        """True when an agent principal cannot see this memory (404, never
+        403 — no existence oracle). Owner/anonymous: always False."""
+        agent = request_agent(request)
+        if agent is None:
+            return False
+        return not scoping.allowed_queryset(agent).filter(pk=pk).exists()
+
     def get(self, request, pk):
+        if self._out_of_scope(request, pk):
+            return Response(
+                {"error": "Memory not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         try:
             memory = async_to_sync(memory_service.get_memory)(pk)
         except Memory.DoesNotExist:
@@ -94,6 +119,10 @@ class MemoryDetailView(APIView):
             return Response(
                 {"error": "No fields to update."},
                 status=status.HTTP_400_BAD_REQUEST,
+            )
+        if self._out_of_scope(request, pk):
+            return Response(
+                {"error": "Memory not found."}, status=status.HTTP_404_NOT_FOUND
             )
         try:
             memory = async_to_sync(memory_service.update_memory)(
@@ -111,6 +140,10 @@ class MemoryDetailView(APIView):
         return Response(MemorySerializer(memory).data)
 
     def delete(self, request, pk):
+        if self._out_of_scope(request, pk):
+            return Response(
+                {"error": "Memory not found."}, status=status.HTTP_404_NOT_FOUND
+            )
         try:
             async_to_sync(memory_service.delete_memory)(pk)
         except Memory.DoesNotExist:
@@ -126,10 +159,15 @@ class SearchView(APIView):
     def post(self, request):
         serializer = SearchRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = dict(serializer.validated_data)
         try:
-            results = async_to_sync(search_service.search)(
-                **serializer.validated_data
-            )
+            data["tags"] = scoping.constrain_read_tags(
+                request_agent(request), data.get("tags")
+            ) or None
+        except scoping.ScopeError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            results = async_to_sync(search_service.search)(**data)
         except (httpx.ConnectError, httpx.ConnectTimeout):
             return Response(
                 {"error": "Embedding service unavailable."},
@@ -142,23 +180,25 @@ class StatsView(APIView):
     throttle_classes = [ReadRateThrottle]
 
     def get(self, request):
-        total = Memory.objects.count()
+        agent = request_agent(request)
+        qs = Memory.objects if agent is None else scoping.allowed_queryset(agent)
+        total = qs.count()
         if total == 0:
             return Response(
                 {"total": 0, "by_source": {}, "top_tags": [], "date_range": None}
             )
 
         # Source breakdown
-        source_rows = Memory.objects.values("source").annotate(count=Count("id"))
+        source_rows = qs.values("source").annotate(count=Count("id"))
         by_source = {row["source"]: row["count"] for row in source_rows}
 
         # Date range
-        agg = Memory.objects.aggregate(
+        agg = qs.aggregate(
             earliest=Min("created_at"), latest=Max("created_at")
         )
 
         # Tag frequency
-        all_tags = Memory.objects.values_list("tags", flat=True)
+        all_tags = qs.values_list("tags", flat=True)
         tag_counter = Counter()
         for tags in all_tags:
             if isinstance(tags, list):
@@ -186,7 +226,9 @@ class TagsView(APIView):
     throttle_classes = [ReadRateThrottle]
 
     def get(self, request):
-        all_tags = Memory.objects.values_list("tags", flat=True)
+        agent = request_agent(request)
+        qs = Memory.objects if agent is None else scoping.allowed_queryset(agent)
+        all_tags = qs.values_list("tags", flat=True)
         tag_counter = Counter()
         for tags in all_tags:
             if isinstance(tags, list):
@@ -237,6 +279,11 @@ class IngestFileView(APIView):
                 tags = []
 
         try:
+            tags = scoping.check_write_tags(request_agent(request), tags)
+        except scoping.ScopeError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
             from ingestion.file_ingestor import ingest_file
 
             results = async_to_sync(ingest_file)(
@@ -268,12 +315,19 @@ class IngestURLView(APIView):
         serializer.is_valid(raise_exception=True)
 
         try:
+            url_tags = scoping.check_write_tags(
+                request_agent(request), serializer.validated_data.get("tags", [])
+            )
+        except scoping.ScopeError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
             from ingestion.url_scraper import SSRFError, scrape_url
 
             results = async_to_sync(scrape_url)(
                 url=serializer.validated_data["url"],
                 source=serializer.validated_data.get("source", "url"),
-                tags=serializer.validated_data.get("tags", []),
+                tags=url_tags,
                 importance=serializer.validated_data.get("importance", 0.5),
             )
         except SSRFError as exc:
@@ -303,6 +357,12 @@ class IngestBatchView(APIView):
         serializer.is_valid(raise_exception=True)
 
         items = serializer.validated_data["items"]
+        agent = request_agent(request)
+        try:
+            for item in items:
+                item["tags"] = scoping.check_write_tags(agent, item.get("tags"))
+        except scoping.ScopeError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
         batch_items = []
         for item in items:
             if item["type"] == "url":

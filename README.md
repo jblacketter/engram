@@ -235,29 +235,50 @@ that pass them can stay inside one domain:
 | MCP `list_recent_memories` | yes | yes |
 | REST `POST /api/search/` | yes | yes |
 
-### Residual surfaces (intentionally unscoped)
+### Per-agent keys (enforced scoping)
 
-These surfaces return data across all domains regardless of caller. They are
-acceptable for a single-user instance; if you ever expose Engram beyond a
-trusted boundary, treat them as gaps to close:
+Each tool/agent can hold its own key bound to the domains it may touch:
 
-- **REST `GET /api/memories/`** — paginated memory list, no filter args.
-- **REST `GET /api/memories/<id>/`** — direct fetch by UUID; no tag check.
-- **REST `GET /api/stats/`** — counts and date range across all memories.
-- **REST `GET /api/tags/`** — full tag enumeration across all domains.
-- **MCP `get_stats`** — same as the REST stats endpoint.
-- **MCP `get_memory`** — direct UUID fetch; no tag check.
-- **React dashboard** — single-user view that displays all memories,
-  recent-feed, and analytics across all domains.
+```bash
+python manage.py agent_keys create claude-code --default-domain engram --allow tagteam
+python manage.py agent_keys list
+python manage.py agent_keys revoke claude-code
+```
+
+The plaintext key (`egk_…`) is shown exactly once; only its SHA-256 hash is
+stored. Use it as a bearer token on REST (`Authorization: Bearer egk_…`)
+and MCP. For agent principals the scoping is **enforced server-side**,
+identically on both surfaces:
+
+- **Writes** with no `domain:` tag get the key's default domain injected;
+  a `domain:` tag outside the key's allowed list is rejected (403 / tool
+  error) — never silently rewritten.
+- **Scoped reads** default to the key's default domain; other allowed
+  domains must be named explicitly; disallowed domains are rejected.
+- **Formerly unscoped surfaces are closed for agents**: `GET
+  /api/memories/`, `/api/memories/<id>/`, `/stats/`, `/tags/`, MCP
+  `get_memory`/`get_stats`/`list_domains` are filtered to the key's
+  allowed domains; out-of-scope ids return 404 (no existence oracle);
+  memories with no `domain:` tag are invisible to agent keys.
+
+Note: the MCP server checks for agent keys at startup — restart it after
+creating the first key.
+
+### Owner surface (intentionally unscoped)
+
+The global `REST_API_KEY`/`MCP_API_KEY` and the dashboard session remain
+the single-user **owner** surface with full visibility across all domains
+— including untagged memories. With no agent keys configured, behavior is
+exactly the pre-scoping single-user system.
 
 ### Limits of soft scoping
 
-- **Discipline-based.** Engram does not enforce that writes carry a domain
-  tag. Clients that omit it produce un-scopable memories.
-- **No per-user auth.** The instance is single-user; auth is global API-key.
-- **No migrations involved.** No `workspace`/`tenant` field exists. If you
-  later need hard isolation, options are: run two Engram instances on
-  separate databases, or add a `workspace` schema column.
+- The *project model* is still tag-based: no `workspace`/`tenant` column
+  exists (a decision checkpoint tracks whether to harden it —
+  see `docs/decision_log.md`). Hard multi-tenant isolation would mean
+  separate instances or a schema column.
+- Owner-surface writes are still discipline-based: the owner can create
+  untagged memories (visible only to the owner surface).
 
 ## Project Structure
 
