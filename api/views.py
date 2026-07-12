@@ -124,10 +124,22 @@ class MemoryDetailView(APIView):
             return Response(
                 {"error": "Memory not found."}, status=status.HTTP_404_NOT_FOUND
             )
+        data = dict(serializer.validated_data)
+        if "tags" in data:
+            # Same write contract as create/ingest (and MCP update): agents
+            # cannot retag a memory out of their allowed domains, and a
+            # tags update with no domain tag gets the default injected —
+            # a row can never leave every agent scope via PATCH.
+            try:
+                data["tags"] = scoping.check_write_tags(
+                    request_agent(request), data["tags"]
+                )
+            except scoping.ScopeError as exc:
+                return Response(
+                    {"error": str(exc)}, status=status.HTTP_403_FORBIDDEN
+                )
         try:
-            memory = async_to_sync(memory_service.update_memory)(
-                pk, **serializer.validated_data
-            )
+            memory = async_to_sync(memory_service.update_memory)(pk, **data)
         except Memory.DoesNotExist:
             return Response(
                 {"error": "Memory not found."}, status=status.HTTP_404_NOT_FOUND

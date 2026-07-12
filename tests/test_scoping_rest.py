@@ -176,3 +176,66 @@ class TestReadScoping:
                 format="json",
             )
             assert response.status_code == 403
+
+
+@pytest.mark.django_db(transaction=True)
+class TestPatchTagEnforcement:
+    """Regression: PATCH tags must run the same write contract as create."""
+
+    def _mem_a(self):
+        from asgiref.sync import async_to_sync
+        return async_to_sync(memory_service.create_memory)(
+            "A's memory", tags=["domain:domain-a", "type:note"]
+        )
+
+    def test_agent_cannot_retag_into_disallowed_domain(self, agents):
+        plain_a, _ = agents
+        mem = self._mem_a()
+        response = _client(plain_a).patch(
+            f"/api/memories/{mem.id}/",
+            {"tags": ["domain:domain-b"]},
+            format="json",
+        )
+        assert response.status_code == 403
+        mem.refresh_from_db()
+        assert mem.tags == ["domain:domain-a", "type:note"]  # row unchanged
+
+    def test_agent_domain_stripping_gets_default_injected(self, agents):
+        """Patching tags with no domain: the default domain is injected —
+        a row can never leave every agent scope via PATCH (same contract
+        as create/ingest and MCP update)."""
+        plain_a, _ = agents
+        mem = self._mem_a()
+        response = _client(plain_a).patch(
+            f"/api/memories/{mem.id}/",
+            {"tags": ["type:renamed"]},
+            format="json",
+        )
+        assert response.status_code == 200
+        mem.refresh_from_db()
+        assert mem.tags == ["type:renamed", "domain:domain-a"]
+        # still visible to the agent afterwards
+        assert _client(plain_a).get(f"/api/memories/{mem.id}/").status_code == 200
+
+    def test_agent_can_retag_within_allowed_domains(self, agents):
+        plain_a, _ = agents
+        mem = self._mem_a()
+        response = _client(plain_a).patch(
+            f"/api/memories/{mem.id}/",
+            {"tags": ["domain:domain-a", "type:promoted"]},
+            format="json",
+        )
+        assert response.status_code == 200
+        mem.refresh_from_db()
+        assert mem.tags == ["domain:domain-a", "type:promoted"]  # unchanged tags kept verbatim
+
+    def test_owner_anonymous_patch_unchanged(self, agents):
+        mem = self._mem_a()
+        response = _client().patch(  # dev-mode owner surface
+            f"/api/memories/{mem.id}/",
+            {"tags": ["totally", "untagged"]},
+            format="json",
+        )
+        assert response.status_code == 200
+        mem.refresh_from_db()
+        assert mem.tags == ["totally", "untagged"]  # raw passthrough, no injection
