@@ -1,395 +1,268 @@
 # Workflows: Lead/Reviewer Collaboration
 
-This document describes how lead and reviewer agents collaborate on projects using this framework.
+This document describes how the lead and reviewer agents collaborate on a
+project using tagteam. It is installed by `tagteam setup` and refreshed by
+`tagteam upgrade`; the authoritative, versioned contract the agents follow is
+the output of `tagteam contract`.
 
-> **Note**: Agent names are configured in `tagteam.yaml`. Read that file to see which agent is the lead and which is the reviewer for your project.
+> **Note**: Agent names are configured in `tagteam.yaml`. Read that file to see
+> which agent is the lead and which is the reviewer for your project.
 
 ## Roles
 
 | Role | Responsibilities |
 |------|------------------|
-| **Lead** | Planning phases, implementing code, creating handoffs |
-| **Reviewer** | Reviewing plans and implementations, providing feedback |
-| **Arbiter** | Breaking ties, making final decisions, approving phases (typically Human) |
+| **Lead** | Plans phases, implements code, submits work for review |
+| **Reviewer** | Reviews plans and implementations, approves or requests changes |
+| **Arbiter** (human) | Rules on escalations, answers questions, steers with interjections |
 
-## Phase Workflow
+## One contract, three ways in
 
-Each phase follows this pattern:
+The handoff contract is one document, served three ways:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        PLANNING CYCLE                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   Lead: /handoff-plan create [phase]                            │
-│      │                                                          │
-│      ▼                                                          │
-│   Lead: /handoff-handoff plan [phase]  ► Reviewer: /handoff-review plan │
-│      │                                          │               │
-│      │◄─────────────────────────────────────────┘               │
-│      │  (feedback in docs/handoffs/[phase]_plan_feedback.md)    │
-│      ▼                                                          │
-│   Lead: /handoff-handoff read [phase]                           │
-│      │                                                          │
-│      ├── If APPROVED ──────────────────────────────────►        │
-│      │                                                          │
-│      └── If CHANGES REQUESTED ─► Lead: /handoff-plan update [phase] │
-│                                          │                      │
-│                                          └──► (repeat cycle)    │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     IMPLEMENTATION CYCLE                        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   Lead: /handoff-implement start [phase]                        │
-│      │                                                          │
-│      ▼                                                          │
-│   [Lead implements the phase]                                   │
-│      │                                                          │
-│      ▼                                                          │
-│   Lead: /handoff-implement complete [phase]                     │
-│      │                                                          │
-│      ▼                                                          │
-│   Lead: /handoff-handoff impl [phase]  ► Reviewer: /handoff-review impl │
-│      │                                          │               │
-│      │◄─────────────────────────────────────────┘               │
-│      │  (feedback in docs/handoffs/[phase]_impl_feedback.md)    │
-│      ▼                                                          │
-│   Lead: /handoff-handoff read [phase]                           │
-│      │                                                          │
-│      ├── If APPROVED ──────────────────────────────────►        │
-│      │                                                          │
-│      └── If CHANGES REQUESTED ─► Lead fixes issues              │
-│                                          │                      │
-│                                          └──► (repeat cycle)    │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                    /handoff-phase complete [phase]
-                              │
-                              ▼
-                    Start next phase...
-```
+| How | Who | Command |
+|-----|-----|---------|
+| Claude Code plugin (`tagteam`) | Claude | `/tagteam:handoff` |
+| Vendored copy at `.claude/skills/handoff/SKILL.md` | Claude Code in a project that still carries one | `/handoff` |
+| The tagteam CLI | Codex, or any agent with a shell | `tagteam contract` |
 
-## Available Skills
+Slash commands are Claude Code entry points. In Codex or another shell agent,
+read `tagteam contract` and follow the described workflow; do not type a Claude
+slash command into that agent's command dispatcher. Either entry point follows
+the same rules. The state file's command line tells
+an agent which to use: *"Read the handoff contract (`tagteam contract`; in
+Claude Code: /tagteam:handoff) and handoff-state.json, then act on your turn."*
 
-| Skill | Purpose | Who Uses |
-|-------|---------|----------|
-| `/handoff-plan` | Create/update phase plans | Lead |
-| `/handoff-handoff` | Create handoff documents | Lead |
-| `/handoff-review` | Review plans or implementations | Reviewer |
-| `/handoff-implement` | Start/track/complete implementation | Lead |
-| `/handoff-phase` | Manage phase lifecycle | Both |
-| `/handoff-status` | Check project status | Both |
-| `/handoff-decide` | Log decisions | Both |
-| `/handoff-escalate` | Escalate to human | Both |
-| `/handoff-sync` | Generate sync summary for sessions | Both |
-| `/handoff-cycle` | Automated review cycles (reduces copy-paste) | Both |
+## The cycle
 
-## Handoff Process
-
-### From Lead to Reviewer
-1. Lead completes work (plan or implementation)
-2. Lead creates handoff document with `/handoff-handoff`
-3. Human switches to reviewer session
-4. Reviewer reads sync with `/handoff-sync reviewer`
-5. Reviewer reviews with `/handoff-review`
-6. Reviewer saves feedback
-
-### From Reviewer to Lead
-1. Reviewer saves feedback to `docs/handoffs/[phase]_[type]_feedback.md`
-2. Human switches to lead session
-3. Lead reads sync with `/handoff-sync lead`
-4. Lead reads feedback with `/handoff-handoff read [phase]`
-5. Lead incorporates feedback or explains why not
-
-## Decision Authority
-
-| Decision Type | Who Decides |
-|---------------|-------------|
-| Technical approach within a phase | Lead |
-| Accepting/rejecting review feedback | Lead |
-| Blocking implementation issues | Reviewer can flag, lead decides |
-| Architecture affecting multiple phases | Requires consensus or Human |
-| Disagreements after 2 review cycles | Human (Arbiter) |
-| Scope changes to requirements | Human |
-
-## Session Transitions
-
-When switching between lead and reviewer:
-
-1. Generate sync summary: `/handoff-sync` or `/handoff-sync [lead|reviewer]`
-2. The sync summary captures current state
-3. In new session, read the sync file: `docs/sync_state.md`
-4. Continue work based on sync state
-
-## Quick Reference
-
-**Starting a new phase:**
-```
-/handoff-phase list           # See all phases
-/handoff-plan create [phase]  # Create the plan
-/handoff-handoff plan [phase] # Send to reviewer
-```
-
-**Reviewing:**
-```
-/handoff-sync reviewer        # Get context
-/handoff-review plan [phase]  # Or /handoff-review impl [phase]
-```
-
-**After review (Lead):**
-```
-/handoff-handoff read [phase] # See feedback
-/handoff-plan update [phase]  # Incorporate changes
-```
-
-**Implementing:**
-```
-/handoff-implement start [phase]
-[do the work]
-/handoff-implement complete [phase]
-/handoff-handoff impl [phase]
-```
-
-## Automated Review Cycle (Alternative)
-
-Use `/handoff-cycle` to reduce manual copy-paste during multi-round reviews. Instead of creating separate handoff/feedback files each round, both agents work from a single cycle document.
-
-### Cycle Workflow
+Each phase in `docs/roadmap.md` goes through a **plan** cycle and then an
+**impl** cycle. Every cycle is a sequence of rounds recorded under
+`docs/handoffs/`, and `handoff-state.json` says whose turn it is.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    AUTOMATED REVIEW CYCLE                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   Lead: /handoff-cycle start [phase] plan                       │
-│      │                                                          │
-│      ▼                                                          │
-│   (Human switches to reviewer terminal)                         │
-│      │                                                          │
-│      ▼                                                          │
-│   Reviewer: /handoff-cycle [phase]                              │
-│      │                                                          │
-│      ├── APPROVE ────────────────────────────────────────►      │
-│      │                                                          │
-│      └── REQUEST_CHANGES                                        │
-│              │                                                  │
-│              ▼                                                  │
-│      (Human switches to lead terminal)                          │
-│              │                                                  │
-│              ▼                                                  │
-│      Lead: /handoff-cycle [phase]  ─► address feedback          │
-│              │                                                  │
-│              └──► (repeat until approved or stale)              │
-│                                                                 │
-│   5+ stale rounds (no progress) ─► Auto-escalate to human       │
-└─────────────────────────────────────────────────────────────────┘
+Lead:      /tagteam:handoff start [phase]          → plan cycle, round 1
+Reviewer:  /tagteam:handoff                        → APPROVE or REQUEST_CHANGES
+Lead:      /tagteam:handoff                        → address feedback, round N+1
+   … until APPROVE …
+Lead:      implement, then
+           /tagteam:handoff start [phase] impl     → impl cycle, round 1
+Reviewer:  /tagteam:handoff                        → review the diff
+   … until APPROVE …
 ```
 
-### Cycle Commands
+Every turn makes exactly **one** cycle-writing call:
 
-| Command | Description |
-|---------|-------------|
-| `/handoff-cycle start [phase] plan` | Start a plan review cycle |
-| `/handoff-cycle start [phase] impl` | Start an implementation review cycle |
-| `/handoff-cycle [phase]` | Continue (auto-detects your role and turn) |
-| `/handoff-cycle status [phase]` | View current status |
-| `/handoff-cycle abort [phase]` | Cancel with a reason |
+| Action | Who | Command |
+|--------|-----|---------|
+| Open a cycle | Lead | `tagteam cycle init --phase P --type plan\|impl --lead L --reviewer R --updated-by L --content "…"` |
+| Submit a round | Lead | `tagteam cycle add --phase P --type T --role lead --action SUBMIT_FOR_REVIEW --round N --updated-by L --content "…"` |
+| Amend mid-review | Lead | `… --action AMEND --round N …` (same round, turn stays with the reviewer) |
+| Approve | Reviewer | `… --role reviewer --action APPROVE --round N …` |
+| Request changes | Reviewer | `… --role reviewer --action REQUEST_CHANGES --round N` (feedback on stdin) |
+| Escalate / ask a human | Reviewer | `… --action ESCALATE` / `… --action NEED_HUMAN` |
+| Read the cycle | Both | `tagteam cycle rounds --phase P --type T [--tail N]` |
 
-### Reviewer Actions
+A cycle ends when the reviewer approves. It escalates to the arbiter when the
+reviewer asks for it, asks a question only a human can answer, or after 10
+consecutive stale rounds. The arbiter reads `tagteam brief` and rules with
+`tagteam rule approve|request-changes|answer`.
 
-- **APPROVE**: Accept the submission, end the cycle
-- **REQUEST_CHANGES**: Provide feedback, continue to next round
-- **NEED_HUMAN**: Pause the cycle for human input
-- **ABORT**: Cancel the cycle
+When a phase's implementation is approved, `tagteam report --phase P` prints
+what it took: rounds, change requests, gate bounces and minutes, elapsed turn
+time per role (including time waiting for someone to relay the turn),
+start-to-approve, the usage rows stored under the phase and how many turns
+they can be matched to. It is read-only and writes nothing; paste the block
+into the phase doc's closeout. Tokens appear only for turns tagteam ran and
+recorded (headless turns, panel lenses, briefs); nothing is reported in
+dollars.
 
-### When to Use Cycle vs Manual
+`tagteam bench` replays recorded reviewer rounds against reviewer cells
+(`claude:<model>:<effort>`) to compare each cell's verdict with the recorded
+one: `bench select` lists rounds with a reviewer verdict, `bench run --round
+P:T:N --cell …` is a dry run (grid + proxy token estimate) until `--yes`, and
+`bench table` shows agreement, missed and extra change requests, tokens and
+seconds per cell. Every lead submission and AMEND pins its working tree under
+`refs/tagteam/snapshots/` (no model involved), so replays of new rounds are
+exact; older rounds need `@BASE..REV` and are reported separately as
+`asserted`. Each pair costs about one reviewer turn of window, and agreement is
+with the recorded reviewer, not with ground truth.
 
-**Use `/handoff-cycle` when:**
-- Expecting multiple review rounds
-- Want to reduce file creation overhead
-- Prefer one command per turn
+## Verification: the one-run rule
 
-**Use manual handoff/review when:**
-- Simple one-round reviews
-- Need detailed structured feedback
-- Prefer separate files for each interaction
+An impl submission costs **one** full-suite run — the one on the record. With
+`gatekeeper.on_submit: true` in `tagteam.yaml`, the gate runs it inside the
+lead's `cycle add` and records the verdict; the lead pre-flights with
+`tagteam gate check --skip-tests` and cites the gate. Without the gate, the lead
+runs the suite once right before submitting and cites the numbers. The
+reviewer reads the diff and does not re-run the suite.
 
----
+## What runs by itself
 
-# Daily Driver: Engram in Everyday Sessions
+| Mode | What happens |
+|------|--------------|
+| Manual | You paste each agent's handoff output into the other agent yourself |
+| `tagteam watch --mode notify\|tmux\|iterm2\|terminal` | The watcher reads `handoff-state.json` and nudges the right terminal on each turn |
+| `tagteam watch --mode headless` | Each turn is a fresh agent process (`claude -p` / `codex exec`) fed the contract, the state and the round tail; nobody is at the terminal |
+| Gatekeeper (`gatekeeper:` block) | Tests + scope + plan-doc checks before every reviewer turn; a failure bounces the lead |
+| Reviewer panel (`panel:` block) | 2–3 narrow lens reviews merged into one reviewer entry |
+| Full roadmap (`/tagteam:handoff start --roadmap`) | All incomplete phases, in dependency order, with review gates between them |
 
-How engram integrates into daily Claude Code work. Setup instructions live
-in `integrations/claude-code/README.md`; this section defines the
-conventions.
+One watcher runs per project. A second `tagteam watch` for the same project is
+refused and names the running one's pid (`kill <pid>` stops it; a watcher shuts
+down cleanly on SIGTERM, including any in-flight headless turn). Stopping
+`tagteam serve` with Ctrl+C stops the watchers that cockpit started and leaves
+any other watcher running, saying so.
 
-## Tag conventions
+## Steering
 
-| Tag | Meaning |
-|-----|---------|
-| `domain:<slug>` | Which project a memory belongs to (one per memory) |
-| `project:<slug>` | Optional finer-grained scope within a domain |
-| `type:project-status` | A full project-status snapshot (newest per domain is canonical) |
-| `type:checkpoint` | A session delta: decisions, learnings, open threads |
-| `type:note` | An explicit ad-hoc memory (`/engram store`) |
+- `tagteam interject "note" [--to lead|reviewer]` — a note the next turn must honor.
+- `tagteam pause --reason "…"` / `tagteam resume` — hold dispatch without losing state.
+- `tagteam cancel-turn` — abandon an in-flight headless turn.
+- `tagteam serve` — the cockpit: talk to the lead, launch, watch, rule.
 
-Domain resolution (hook and skill): `ENGRAM_DOMAIN` env var → `.engram`
-marker (`domain=<slug>`, found by upward walk from cwd) → git root
-directory name (a `.git` file or directory both count — worktrees have a
-file) → cwd basename; slugs normalize to `[a-z0-9-]`.
+## Files tagteam writes
 
-**Trust note:** a repository-controlled `.engram` file selects which
-domain is loaded into the session — review it when opening untrusted
-repositories, and never let an untrusted project point at a sensitive
-domain. The hook injects recalled memories with an explicit
-untrusted-reference warning, sanitizes markup so content cannot escape the
-context envelope, and excludes raw `ingested` document chunks from ambient
-recall (they remain reachable via explicit search).
+| Path | What |
+|------|------|
+| `handoff-state.json` | Whose turn, what command, current phase/type/round |
+| `docs/handoffs/<phase>_<type>_rounds.jsonl` + `_status.json` | The cycle record |
+| `docs/phases/<phase>.md` | The plan (the lead writes it; the reviewer reads it) |
+| `docs/roadmap.md` | The phase list and each phase's status |
+| `docs/escalations/` | Decision briefs for escalated cycles |
+| `.tagteam/` | Watcher and headless runtime state (not for editing) |
+| `tagteam-manifest.json` | What `setup`/`upgrade` last wrote (path, sha256, version) — commit it |
 
-## The status snapshot contract
+## Framework files and upgrades
 
-A `type:project-status` memory is always a **full snapshot**, never a
-delta:
+`docs/workflows.md` and, without the plugin, `.claude/skills/handoff/SKILL.md`
+are framework files. After
+`pip install -U tagteam`, run `tagteam upgrade --preview` (every registered
+project) or `tagteam setup --preview` (this one) to see what would change,
+then run it without `--preview`:
+
+- files whose bytes tagteam wrote (recorded in `tagteam-manifest.json`, a
+  known vendored contract, or an exact copy of what an earlier release
+  installed — see below) are refreshed to the new package;
+- files that match the new package are left alone;
+- anything else is **kept** and reported with the exact
+  `tagteam setup DIR --accept PATH` line that overwrites it. Accepting needs
+  the path tracked and clean in git (so `git checkout -- PATH` undoes it);
+  `--force` lifts only that check.
+
+Earlier versions also installed `templates/*.md` and `docs/checklists/*.md`.
+Nothing reads a project's copy of either, so they are **retired**: no longer
+created, and on the next `setup` / `upgrade`
+
+- a copy the installed package can reproduce byte for byte is removed
+  (`retired  templates/cycle.md`), and the directory with it once empty —
+  your own files in it, and the directory, are left alone;
+- a copy tagteam wrote in an older version whose bytes it no longer ships is
+  removed only when git can restore it (tracked and clean); otherwise it is
+  kept until you commit it, or delete it with `--accept PATH --force`;
+- a copy you edited is kept; `tagteam setup DIR --accept PATH` deletes it
+  under the same tracked-and-clean rule;
+- a symlink or non-regular file there is kept and never an error.
+
+**Copies from earlier releases.** The package carries the earlier sources of
+its framework files (through 3.12.0 — a fixed set; later versions are recorded
+in the manifest). One of them, the pre-plugin `workflows.md` (through 3.10.0),
+is carried as a sha256 digest only, because its text is nothing but commands
+that no longer exist: an exact copy is still recognised and refreshed, but the
+old text cannot be had back from the installed package. A file that equals one of them exactly — verbatim, or
+rendered with this project's configured lead / reviewer names, or with the two
+swapped (`setup` wrote the names into templates until 3.12.0) — counts as
+tagteam's: an old `docs/workflows.md` is refreshed, an old template is
+retired. The match is byte for byte. If the agent names in `tagteam.yaml`
+changed since the file was written, or the file was edited at all, it is kept
+as yours.
+
+`tagteam bench` uses a project's own `docs/checklists/<type>_review.md` when
+there is one and the package's otherwise.
+
+Pre-plugin flat skills (`.claude/skills/handoff-*.md`) are never deleted
+without `--accept PATH`. Symlinks or directories at a managed path — or at any
+directory above one — are refused and left for you to fix by hand; setup never
+creates or writes through a link, not for the framework directories, not for
+the once-only seeds (`docs/roadmap.md`, `docs/decision_log.md`, `AGENTS.md`,
+`CLAUDE.md`), not for the manifest. A new target directory (missing ancestors
+included) is created the same checked way; `--preview` on one reports what a
+fresh setup would create and creates nothing — nor does `tagteam upgrade
+--preview` touch the project registry. A second run changes nothing. `tagteam state`
+shows the package version, the manifest version and the plugin status side by
+side — a package update does not move the other two.
+
+## Choosing and changing roles
+
+Both assignments use the same workflow. For Codex lead / Claude reviewer:
+
+```yaml
+agents:
+  lead:
+    name: codex
+  reviewer:
+    name: claude
+```
+
+Swap the two names for Claude lead / Codex reviewer. Custom display names may
+specify an explicit `command`. `tagteam state` shows the resolved roles, launch
+commands, project root and contract entry point.
+
+Finish the active cycle before switching roles. Stop the watcher and agent
+sessions, edit `tagteam.yaml`, then recreate the sessions and watcher. An active
+participant mismatch refuses ordinary cycle writes and automated dispatch;
+restore the recorded assignment to finish the cycle. Historical participants
+are preserved. Human rulings and read/status remain available.
+
+The guard protects workflow submissions, not arbitrary agent edits or external
+actions. Existing terminal panes are not identified or replaced automatically.
+`TAGTEAM_READ_ONLY=1` likewise protects Tagteam writes, not every filesystem/API
+operation. Desktop and headless sessions may have different tools and access.
+
+Existing project instruction files are preserved. New instruction pointers are
+created only when absent. Readiness does not mean an old project's own skills
+and rules agree with the new assignment — run `tagteam doctor` after a switch.
+
+## Diagnostics: `tagteam doctor`
+
+`tagteam doctor [DIR] [--json]` is a read-only report. It writes nothing, probes
+no service, and prints no configured value, command argument or secret. It is
+safe for a read-only helper (`TAGTEAM_READ_ONLY=1`).
+
+- **Legacy workflow findings.** Project skills (`.claude/skills/`), commands
+  (`.claude/commands/`), `AGENTS.md` and `CLAUDE.md` that use retired command
+  syntax (the retired pre-plugin `handoff-*` slash commands) or name a fixed role holder ("Claude is
+  always the lead"). A fixed role that contradicts `tagteam.yaml` is a `warn`;
+  one that matches today is `info` (stale after a switch). Each finding shows
+  the line and a manual remediation. Findings are candidates: tagteam has no
+  provenance for these files and never edits or deletes them. `setup` and
+  `upgrade` print one line pointing here when a project has any.
+- **Per role, desktop and headless separately.** The launch executable and the
+  headless provider/executable (`found` / `missing` / `unknown`), which
+  instruction file each provider loads by itself, and what a headless turn
+  injects (and whether it is truncated).
+- **Contract and tools.** `tagteam contract`, the plugin (`unknown` when Claude
+  Code could not be asked — not the same as `missing`), the vendored skill,
+  `.mcp.json` server names and Claude hook events — configured, not probed.
+- **Protections.** Which guarantees are enforcement and which are instructions:
+  a Claude hook does not bind a Codex process.
+
+Symlinks and non-regular files are reported, never followed or opened.
+
+## Capabilities and alternatives
+
+Tagteam cannot know which tools a task needs. Record that in your project
+instructions (`AGENTS.md` or `CLAUDE.md`), in role-neutral terms, so both
+providers read the same thing:
 
 ```markdown
-# Status: <domain>
-Goal: <one-line project goal>
-State: <current state, 1-3 lines>
-Recent: <progress since last snapshot>
-Blockers: <blockers / open questions, or "none">
-Next: <next actions>
-Updated: <YYYY-MM-DD> | Evidence: <checkpoint memory id(s) or "manual">
+## Capabilities
+- Datadog (logs, monitors) — needed for incident triage evidence.
+  Without it: do not triage; ask the arbiter for an export.
+- Markdown/docs edits need no external tools.
 ```
 
-Retrieval is deterministic, not semantic: latest snapshot via
-`GET /api/memories/?tags=domain:<d>,type:project-status&limit=1` (or the
-equivalent `list_recent_memories` call); recent **non-status, non-ingested**
-activity via `tags=domain:<d>&exclude_tags=type:project-status,ingested&limit=5`.
-Raw ingested document chunks are excluded from ambient recall for safety
-(prompt-injection risk) and noise; they remain available through explicit
-search.
-
-## The daily loop
-
-1. **Session start (ambient):** the SessionStart hook injects the latest
-   status snapshot + recent memories for the repo's domain. Silent when
-   engram is down or the domain is empty.
-2. **Start of day:** `start_day` MCP prompt — cross-project briefing
-   (discovers projects via `list_domains`).
-3. **During work:** `/engram search <query>`, `/engram store <text>`;
-   recall stays ambient.
-4. **Project switch:** `switch_project` MCP prompt.
-5. **End of a substantive session:** `/engram checkpoint` (or the
-   `end_session` prompt) — drafts a checkpoint + updated full snapshot,
-   stores only what you confirm. **Capture is manual and suggestion-first;
-   nothing writes without confirmation.**
-6. **Weekly:** `weekly_review` prompt — aggregates the week's checkpoints
-   per project (time-bounded via `list_recent_memories(after=...)`) and
-   proposes snapshot updates.
-
-## Adoption tracking
-
-Real-world usage is logged in `docs/adoption-log.md`. The Phase 12
-(agent-scoping) project-model decision is gated on that log: meaningful use
-across at least two projects confirmed by the human, or an explicit
-"insufficient evidence — deferred" entry.
-
-## Identity & onboarding
-
-The AgentOS identity pillar. Identity lives as plain markdown in
-`ENGRAM_IDENTITY_DIR` (default `~/.engram/identity/`) — make it a git
-repository; it is the portable source of truth and survives switching
-tools:
-
-```
-identity/
-  identity.md          # who you are, preferences, house rules (your words)
-  context/<topic>.md   # standing knowledge; topic slug [a-z0-9_-]
-  projects/<domain>.md # canonical long-form project context; domain slug [a-z0-9-]
-```
-
-Setup: `python manage.py init_identity` scaffolds commented templates
-(never overwrites; tooling never invents identity content — you write it),
-then `python manage.py sync_identity` makes the files semantically
-searchable in engram.
-
-**Sync semantics:** deterministic per-file provenance
-(`metadata.provenance = {system: identity_sync, key: identity:<path>,
-sha256}`, queried by system+key with no recency limit). Unchanged files
-skip; edited files update in place; deleted files are reported as orphans.
-Deletion is host-admin-only: `--prune` removes orphans, and
-`--repair-duplicates` collapses pre-existing duplicate rows (ordinary sync
-skips such files and reports). Files over 262,144 bytes or not valid
-UTF-8 are rejected per-file. **Identity content is embedded locally
-only** — the cloud fallback is disabled for identity sync unless
-`ENGRAM_IDENTITY_CLOUD_EMBED=true`.
-
-**MCP resources (read-only):** `engram://identity`, `engram://context`,
-`engram://context/{topic}`, `engram://projects`,
-`engram://projects/{domain}` — served from disk at request time with slug
-validation and path containment.
-
-**Onboarding:** the `onboard_agent` MCP tool (args: `domain`,
-`client_name`) returns one bounded document: your identity (trusted
-instructions), the engram conventions, connection info
-(`ENGRAM_PUBLIC_REST_URL` / `ENGRAM_PUBLIC_MCP_URL` — never secrets), and
-per-domain project context + latest status + recent checkpoints (labeled
-reference data, sanitized like ambient recall). The MCP `sync_identity`
-tool is report-only.
-
-**Tagteam boundary:** `python manage.py ingest_tagteam_cycles --repo
-<path>` imports **approved** cycles from tagteam's rendered JSONL exports
-(`docs/handoffs/*_rounds.jsonl`) as `type:cycle-summary` memories —
-citable evidence for status proposals. The exports are refresh-able with
-`tagteam cycle render --phase <phase> --type <plan|impl>`; tagteam's
-database (`.tagteam/tagteam.db`) is the source of truth and is never
-parsed; engram never writes tagteam state.
-
-## Per-agent keys (agent-scoping)
-
-Every agent/tool can hold its own `egk_…` key bound to a default domain
-and an allowed-domain list (`python manage.py agent_keys create <name>
---default-domain <slug> [--allow <slug> ...]`). Enforcement is identical
-on REST and MCP (one shared module, `core/services/scoping.py`): writes
-inject the default domain or reject out-of-scope domains; reads default
-to the key's default domain; formerly unscoped surfaces (list, detail,
-stats, tags, get_memory, get_stats, list_domains) are filtered to the
-key's allowed domains with 404-not-403 for invisible ids. The owner
-surface (global key, dashboard) keeps full visibility. See the README
-"Scoping memories across domains" section for the full contract.
-
-## Automations
-
-Scheduled upkeep runs through one command:
-
-```bash
-python manage.py maintenance            # decay recompute
-python manage.py maintenance --digest   # decay + weekly digest (stored as
-                                        # a type:digest memory, owner-only,
-                                        # embedded locally)
-```
-
-**Host scheduling (recommended).** Crontab (WSL/Linux):
-
-```cron
-15 3 * * *  cd /path/to/engram && .venv/bin/python manage.py maintenance
-30 3 * * 1  cd /path/to/engram && .venv/bin/python manage.py maintenance --digest
-```
-
-macOS launchd: create `~/Library/LaunchAgents/ai.engram.maintenance.plist`
-with a `ProgramArguments` of the same command and a `StartCalendarInterval`
-(daily 03:15), then `launchctl load` it.
-
-**Compose scheduling (optional).** The prod stack ships a `scheduler`
-service behind a profile — daily decay, digest on Mondays:
-
-```bash
-docker compose -f docker-compose.prod.yml --profile scheduler up -d
-```
-
-The command exits non-zero on failure so cron/launchd/compose logs surface
-problems. Identity sync is deliberately NOT scheduled — the identity repo
-is human-edited; syncing stays a deliberate action.
+A missing tool should block only the tasks whose evidence depends on it.
+`tagteam doctor` shows what is configured; it cannot show that a connection
+works in a given session, so a task that needs one should verify it first.
+Keep durable decisions and evidence in project files, not in a provider's
+private memory, and never copy credentials between tools.
